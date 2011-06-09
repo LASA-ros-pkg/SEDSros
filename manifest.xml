@@ -1,0 +1,18 @@
+<package>
+  <description brief="seds">
+
+     seds
+
+  </description>
+  <author>Jeremy Stober</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/seds</url>
+
+  <depend package="roscpp" />
+  <depend package="roslib" />
+  <depend package="std_msgs" />
+
+</package>
+
+

@@ -3,10 +3,10 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#include <QtGui>
+// #include <QtGui>
 
-QPixmap pm(320,240);
-QLabel lbl;
+// QPixmap pm(320,240);
+// QLabel lbl;
 
 //constructor
 SEDS::SEDS()
@@ -526,58 +526,58 @@ bool SEDS::initialize_value(){
 }
 
 
-void PaintData(std::vector<float> data)
-{
-	QPainter painter(&pm);
-	painter.fillRect(pm.rect(), Qt::white);
+// void PaintData(std::vector<float> data)
+// {
+// 	QPainter painter(&pm);
+// 	painter.fillRect(pm.rect(), Qt::white);
 
-	int w = pm.width();
-	int h = pm.height();
-	int cnt = data.size();
-	int pad = 10;
-	QPointF oldPoint;
-	double minVal = FLT_MAX;
-	double maxVal = -FLT_MAX;
-	for(int i=0; i< data.size(); i++)
-	{
-		if(minVal > data[i]) minVal = data[i];
-		if(maxVal < data[i]) maxVal = data[i];
-	}
-	if (minVal == maxVal)
-	{
-		minVal = 0;
-	}
+// 	int w = pm.width();
+// 	int h = pm.height();
+// 	int cnt = data.size();
+// 	int pad = 10;
+// 	QPointF oldPoint;
+// 	double minVal = FLT_MAX;
+// 	double maxVal = -FLT_MAX;
+// 	for(int i=0; i< data.size(); i++)
+// 	{
+// 		if(minVal > data[i]) minVal = data[i];
+// 		if(maxVal < data[i]) maxVal = data[i];
+// 	}
+// 	if (minVal == maxVal)
+// 	{
+// 		minVal = 0;
+// 	}
 
-	painter.setBrush(Qt::NoBrush);
-	painter.setPen(QPen(QColor(200,200,200), 0.5));
-	int steps = 10;
-	for(int i=0; i<=steps; i++)
-	{
-		painter.drawLine(QPoint(0, i/(float)steps*(h-2*pad) + pad), QPoint(w, i/(float)steps*(h-2*pad) + pad));
-		painter.drawLine(QPoint(i/(float)steps*w, 0), QPoint(i/(float)steps*w, h));
-	}
-	painter.setRenderHint(QPainter::Antialiasing);
+// 	painter.setBrush(Qt::NoBrush);
+// 	painter.setPen(QPen(QColor(200,200,200), 0.5));
+// 	int steps = 10;
+// 	for(int i=0; i<=steps; i++)
+// 	{
+// 		painter.drawLine(QPoint(0, i/(float)steps*(h-2*pad) + pad), QPoint(w, i/(float)steps*(h-2*pad) + pad));
+// 		painter.drawLine(QPoint(i/(float)steps*w, 0), QPoint(i/(float)steps*w, h));
+// 	}
+// 	painter.setRenderHint(QPainter::Antialiasing);
 
-	painter.setPen(QPen(Qt::black, 1.5));
-	for(int i=0; i< data.size(); i++)
-	{
-		float value = data[i];
-		float x = i/(float)cnt*w;
-		float y = (1 - (value-minVal)/(maxVal - minVal)) * (float)(h-2*pad) + pad;
-		QPointF point(x, y);
-		if(i) painter.drawLine(oldPoint, point);
-		//painter.drawEllipse(point, 3, 3);
-		oldPoint = point;
-	}
-	painter.setPen(QPen(Qt::black, 0.5));
-	painter.setBrush(QColor(255,255,255,200));
-	painter.drawRect(QRect(190,5,100,45));
-	painter.setPen(QPen(Qt::black, 1));
-	painter.drawText(QPointF(200, 20), QString("J_0: %1").arg(data[0]));
-	painter.drawText(QPointF(200, 40), QString("J_F: %1").arg(data[data.size()-1]));
-	lbl.setPixmap(pm);
-	lbl.show();
-}
+// 	painter.setPen(QPen(Qt::black, 1.5));
+// 	for(int i=0; i< data.size(); i++)
+// 	{
+// 		float value = data[i];
+// 		float x = i/(float)cnt*w;
+// 		float y = (1 - (value-minVal)/(maxVal - minVal)) * (float)(h-2*pad) + pad;
+// 		QPointF point(x, y);
+// 		if(i) painter.drawLine(oldPoint, point);
+// 		//painter.drawEllipse(point, 3, 3);
+// 		oldPoint = point;
+// 	}
+// 	painter.setPen(QPen(Qt::black, 0.5));
+// 	painter.setBrush(QColor(255,255,255,200));
+// 	painter.drawRect(QRect(190,5,100,45));
+// 	painter.setPen(QPen(Qt::black, 1));
+// 	painter.drawText(QPointF(200, 20), QString("J_0: %1").arg(data[0]));
+// 	painter.drawText(QPointF(200, 40), QString("J_F: %1").arg(data[data.size()-1]));
+// 	lbl.setPixmap(pm);
+// 	lbl.show();
+// }
 
 std::vector<float> displayData;
 

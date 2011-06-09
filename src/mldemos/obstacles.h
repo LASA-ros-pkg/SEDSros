@@ -16,38 +16,33 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free
 Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 *********************************************************************/
-#ifndef _DYNAMICAL_SEDS_H_
-#define _DYNAMICAL_SEDS_H_
+#ifndef _OBSTACLES_H_
+#define _OBSTACLES_H_
 
 #include <vector>
-#include "dynamical.h"
-#include "SEDS.h"
-#include "fgmm/fgmm++.hpp"
+#include "datasetManager.h"
+#include "mymaths.h"
 
-class DynamicalSEDS : public Dynamical
+class ObstacleAvoidance
 {
 public:
-	Gmm *gmm;
-	SEDS *seds;
-private:
-	u32 nbClusters;
-	float penalty;
-	bool bPrior;
-	bool bMu;
-	bool bSigma;
-	int objectiveType;
-	float *data;
-public:
-	fvec endpoint;
-	fVec endpointFast;
-	DynamicalSEDS();
-	void Train(std::vector< std::vector<fvec> > trajectories, ivec labels);
-	std::vector<fvec> Test( const fvec &sample, const int count);
-	fvec Test( const fvec &sample);
-	fVec Test( const fVec &sample);
-	char *GetInfoString();
-
-	void SetParams(int clusters, float penalty, bool bPrior, bool bMu, bool bSigma, int objectiveType);
+	std::vector< Obstacle > obstacles;
+	virtual void SetObstacles(std::vector< Obstacle > obstacles)
+	{
+		this->obstacles = obstacles;
+	}
+	virtual fvec Avoid(fvec &x, fvec &xdot)
+	{
+		fvec newXDot;
+		newXDot.resize(2);
+		newXDot = xdot;
+		return newXDot;
+	};
+	virtual fVec Avoid(fVec &x, fVec &xdot)
+	{
+		fvec vx=x, vxdot=xdot;
+		return fVec(Avoid(vx, vxdot));
+	}
 };
 
-#endif // _DYNAMICAL_SEDS_H_
+#endif // _OBSTACLES_H_

@@ -30,7 +30,7 @@ rosbuild_gensrv()
 #rosbuild_add_executable(example examples/example.cpp)
 
 # I don't really understand how to manage builds with cmake ... don't judge me.
-rosbuild_add_executable(seds_node src/seds_node.cpp 
+rosbuild_add_executable(seds_node src/seds_node.cpp src/process_mlfile.cpp
 
 src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp 
 

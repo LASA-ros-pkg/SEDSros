@@ -6,10 +6,9 @@
 #include "rosbag/view.h"
 
 #include "seds/SedsOptimize.h"
+#include "seds/SedsMessage.h"
 #include "mldemos/dynamicalSEDS.h"
 #include "process_mlfile.hpp"
-#include "turtlesim/Pose.h"
-
 
 bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &res )
 {
@@ -23,7 +22,7 @@ bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &re
   if (req.filetype == 0){ // an ml file generated using mldemos
 
     // process the input file into trajectories for training
-    string filename = req.filenames[0];
+    string filename = req.filename;
     process_dataset_manager_file(filename, trajectories, labels, dT);
     seds.dT = dT;
 
@@ -32,37 +31,80 @@ bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &re
 
     // save the model
     seds.seds->saveModel(req.outputfile.c_str());
-  } else if (req.filetype == 1){ // a list of bag files
+  } else if (req.filetype == 1){ // a bag file
 
-    ROS_INFO("Filesize: %d", req.filenames.size());
+    // initialize the bag view
+    rosbag::Bag bag;
+    bag.open(req.filename, rosbag::bagmode::Read);
+    rosbag::View view(bag, rosbag::TopicQuery("seds/trajectories"));
+    uint32_t maxindx = 0;
+    ivec tlengths;
+    uint32_t xsize = 0;
+    uint32_t dxsize = 0;
+    tlengths.push_back(0);
+    bool first = true;
 
-    // # of bagfiles -- every bag file contains one trajectory
-    trajectories.resize(req.filenames.size());
+    ROS_INFO("Processing bag: %s", req.filename.c_str());
 
-    for (int i=0;i<req.filenames.size();i++){
+    // This first loop collects some statistics about the trajectories.
+    BOOST_FOREACH(rosbag::MessageInstance const m, view){
+      seds::SedsMessage::ConstPtr p = m.instantiate<seds::SedsMessage>();
 
-      // initialize the bag view
-      rosbag::Bag bag;
-      // vector<string> topics;
-      // topics.push_back("turtle1/pose"); // TODO - make this a generic parameter
-      bag.open(req.filenames[i], rosbag::bagmode::Read);
-      rosbag::View view(bag, rosbag::TopicQuery("turtle1/pose"));
-
-      ROS_INFO("Processing bag: %s", req.filenames[i].c_str());
-      BOOST_FOREACH(rosbag::MessageInstance const m, view){
-      	turtlesim::Pose::ConstPtr p = m.instantiate<turtlesim::Pose>();
-	ros::Time t = m.getTime();
-	ROS_INFO("t: %f", t.toSec());
-      	ROS_INFO("x: %f", p->x);
+      if (first){ // collect the sizes of the x and dx data
+	xsize = p->x.size();
+	dxsize = p->dx.size();
       }
 
+      if (maxindx < (p->index)){ // determine the # of trajectories
+	tlengths.push_back(0);
+	maxindx = p->index;
+      }
 
+      // figure out the trajectory lengths
+      tlengths[maxindx]++;
     }
-  }
-  else {
+
+    ROS_INFO("# of Trajectories: %d", maxindx);
+    ROS_INFO("x size: %d", xsize);
+    ROS_INFO("dx size: %d", dxsize);
+
+    // resize the container for all the trajectory data
+    trajectories.resize(tlengths.size());
+
+    for (int i=0;i<tlengths.size();i++){
+      trajectories[i].resize(tlengths[i]);
+      ROS_INFO("Traj %d has length %d", i, tlengths[i]);
+    }
+
+    // This second loop fills in the trajectory data.
+    int i = 0;
+    int lastindex = 0;
+
+    BOOST_FOREACH(rosbag::MessageInstance const m, view){
+      seds::SedsMessage::ConstPtr p = m.instantiate<seds::SedsMessage>();
+
+      if (lastindex != p->index){
+	// start populating new trajectory data
+	i = 0;
+	lastindex = p->index;
+      }
+
+      // finally we can actually populate the data
+      trajectories[p->index][i].resize(xsize + dxsize);
+      for (int j=0; j<xsize; j++){
+	trajectories[p->index][i][j] = p->x[j];
+      }
+
+      for (int k=0; k<dxsize; k++){
+	trajectories[p->index][i][xsize + k] = p->dx[k];
+      }
+    }
+
+  } else {
     ROS_ERROR("Filetype not supported!");
   }
 
+  ROS_INFO("All done!");
   return true;
 }
 

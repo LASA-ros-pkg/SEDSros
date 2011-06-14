@@ -16,7 +16,6 @@
   <depend package="turtlesim" />
   <depend package="rospy" />
   <depend package="rosbag" />
-  <depend package="turtlesim" />
 
 </package>
 

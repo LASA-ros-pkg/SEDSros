@@ -8,6 +8,7 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
 #set(ROS_BUILD_TYPE RelWithDebInfo)
+set(ROS_BUILD_TYPE Debug)
 
 rosbuild_init()
 
@@ -17,7 +18,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #uncomment if you have defined messages
-#rosbuild_genmsg()
+rosbuild_genmsg()
 #uncomment if you have defined services
 rosbuild_gensrv()
 
@@ -32,9 +33,9 @@ rosbuild_gensrv()
 # I don't really understand how to manage builds with cmake ... don't judge me.
 rosbuild_add_executable(seds_node src/seds_node.cpp src/process_mlfile.cpp
 
-src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp 
+src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp
 
-src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp 
+src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp
 
 src/MathLib/Differentiator.cpp	 src/MathLib/MathLibCommon.cpp	src/MathLib/ReferenceFrame.cpp	src/MathLib/SpatialMatrix.cpp	 src/MathLib/Vector3.cpp
 src/MathLib/GradientDescent.cpp  src/MathLib/MathLib.cpp	src/MathLib/Regression.cpp	src/MathLib/SpatialVector.cpp	 src/MathLib/Vector.cpp

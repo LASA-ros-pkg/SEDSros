@@ -19,6 +19,9 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   int dim = seds->d * 2;
   int nbClusters = seds->K;
 
+  if (gmm != NULL)
+    delete gmm;
+
   gmm = new Gmm(nbClusters,dim);
 
   // and we copy the values back to the source

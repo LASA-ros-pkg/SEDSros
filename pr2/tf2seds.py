@@ -89,7 +89,7 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # time remains the same
 
                     if (pm.dt != zero and not iszero(pm.dx)):
-                        print pm.t
+                        rospy.logdebug("Message time: %s" % str(pm.t))
                         outbag.write('seds/trajectories', pm)
 
                         # alt. set t parameter to orginal bag
@@ -135,6 +135,6 @@ if __name__ == '__main__':
 
     rospy.init_node('tf2seds')
 
-    import pdb
-    pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     process_bags(outfile, bagfiles, source_frameid,target_frameid)

@@ -25,6 +25,7 @@ if __name__ == '__main__':
 
     rospy.init_node('ds_driver')
     listener = tf.TransformListener()
+
     pub = rospy.Publisher('r_cart/command_pose', PoseStamped)
 
     # wait for the ds server
@@ -40,12 +41,19 @@ if __name__ == '__main__':
 
     cmd = PoseStamped()
     cmd.header.frame_id = "/torso_lift_link"
-    rate = rospy.Rate(10) # 10Hz
+    rate = rospy.Rate(1)
     while not rospy.is_shutdown():
 
         et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
         t = listener.getLatestCommonTime(source_frameid, target_frameid)
-        x = list(et[0][:] + et[1][:])
+
+        # if the ds_server can produce rotations...
+        #x = list(et[0][:] + et[1][:])
+
+        # otherwise ...
+        rot = list(et[1][:])
+        x = list(et[0][:])
+
         dx = list(ds(x).dx)
 
         rospy.loginfo("x: %s" % str(x))
@@ -57,10 +65,16 @@ if __name__ == '__main__':
         cmd.pose.position.x = newx[0]
         cmd.pose.position.y = newx[1]
         cmd.pose.position.z = newx[2]
-        cmd.pose.orientation.x = x[3]
-        cmd.pose.orientation.y = x[4]
-        cmd.pose.orientation.z = x[5]
-        cmd.pose.orientation.w = x[6]
+
+        # just use the old command pose orientations
+        cmd.pose.orientation.x = rot[0]
+        cmd.pose.orientation.y = rot[1]
+        cmd.pose.orientation.z = rot[2]
+        cmd.pose.orientation.w = rot[3]
+
+        # these won't work even if seds learned parameters for them
+        # since the constraints on rotations are not preserved
+
         #cmd.pose.orientation.x = newx[3]
         #cmd.pose.orientation.y = newx[4]
         #cmd.pose.orientation.z = newx[5]

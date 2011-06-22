@@ -8,7 +8,7 @@
 # setup the ds_node with the current model
 rosrun seds ds_node &
 sleep 2
-rosservice call load_model "/home/stober/workspace/ros/seds/models/model_pr2.txt"
+rosservice call load_model "/home/stober/workspace/ros/seds/models/model_pr2_xyz.txt"
 sleep 2
 
 # iteratively calls ds_server on latest tf position and publishes the result to r_cart/command_pose

@@ -37,7 +37,7 @@ def iszero(arr):
             return False
     return True
 
-def process_bags(outfilename, inbags, source_fid, target_fid):
+def process_bags(outfilename, inbags, source_fid, target_fid, rotations=True):
 
     outbag = rosbag.Bag(outfilename, "w")
     pm = SedsMessage() # store previous message for dx computation
@@ -66,7 +66,11 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     t = listener.getLatestCommonTime(source_fid, target_fid)
 
                     # fill in the seds message
-                    cm.x = et[0][:] + et[1][:] # pos (x,y,z) and orient (x,y,z,w)
+                    if rotations:
+                        cm.x = et[0][:] + et[1][:] # pos (x,y,z) and orient (x,y,z,w)
+                    else:
+                        cm.x = et[0][:] # pos (x,y,z)
+
                     cm.index = i
                     cm.t = t
 
@@ -82,11 +86,23 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # compute dt
                     pm.dt = cm.t - pm.t;
 
-                    # write out the seds bag if time has changed
-                    # some tf frames change at a much faster rate
-                    # and so listener reprocesses the same
-                    # transform lookup even though latest common
-                    # time remains the same
+                    # Write out the seds bag if time has changed.
+                    # Some tf frames change at a much faster rate and
+                    # so listener reprocesses the same transform
+                    # lookup even though latest common time remains
+                    # the same. If we did not check pm.dt != zero,
+                    # we'd end up with a lot of duplicate entries.
+
+                    # We also check whether pm.dx is zero. This choice
+                    # is the result of a fair amount of
+                    # experimentation to try to extract the actual
+                    # motions from a bagfile that probably contains a
+                    # lot of the robot just sitting there (e.g. before
+                    # the teaching trajectory actually starts). I
+                    # experimented a fair bit with the best way to
+                    # extract the useful subtrajectory out of the bag
+                    # and this criterion is the best in terms of
+                    # simplicity and quality.
 
                     if (pm.dt != zero and not iszero(pm.dx)):
                         rospy.logdebug("Message time: %s" % str(pm.t))
@@ -118,14 +134,14 @@ if __name__ == '__main__':
     target_frameid = 'r_gripper_tool_frame'
 
     # collected on bosch pr2
-    bagfiles = ['/home/stober/workspace/ros/bags/2011-06-15-09-37-51.bag',
-                '/home/stober/workspace/ros/bags/2011-06-15-09-38-28.bag',
-                '/home/stober/workspace/ros/bags/2011-06-15-09-38-55.bag',
-                '/home/stober/workspace/ros/bags/2011-06-15-09-39-16.bag',
-                '/home/stober/workspace/ros/bags/2011-06-15-09-39-36.bag',
-                '/home/stober/workspace/ros/bags/2011-06-15-09-40-07.bag']
+    bagfiles = ['/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-37-51.bag',
+                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-28.bag',
+                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-55.bag',
+                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-16.bag',
+                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-36.bag',
+                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-40-07.bag']
 
-    outfile = '/home/stober/workspace/ros/bags/seds.bag'
+    outfile = '/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag'
 
     # collected in simulator
     # bagfiles = ['/home/stober/workspace/ros/bags/sim/2011-06-20-12-57-34.bag',
@@ -137,4 +153,16 @@ if __name__ == '__main__':
 
     # import pdb
     # pdb.set_trace()
-    process_bags(outfile, bagfiles, source_frameid,target_frameid)
+
+    """
+    Rotations may cause a problem for SEDS optimization. The
+    quaternion representation requires that the magnitude be
+    normalized, but the SEDS optimization process does not include
+    this constraint. If the magnitude differs from 1.00 then the planned
+    motion will not succeed. An Euler representation is also possible,
+    but this has not (to my knowledge) been exposed to the Python tf
+    API. I'm not sure if there are also constraints for that choice of
+    rotation representation.
+    """
+
+    process_bags(outfile, bagfiles, source_frameid,target_frameid,rotations=False)

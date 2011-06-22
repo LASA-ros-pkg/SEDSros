@@ -99,6 +99,7 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
     ROS_INFO("Min size: %d", minsize);
     ROS_INFO("Max size: %d", maxsize);
 
+    // Do we interpolate or truncate? Not sure...
     // for (int i=0;i<tlengths.size();i++){
     //   while(trajectories[i].size() > minsize) trajectories[i].pop_back();
     // }

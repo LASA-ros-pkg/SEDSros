@@ -64,8 +64,11 @@ void DynamicalSEDS::Train(std::vector< std::vector<fvec> > trajectories, ivec la
 		FOR(j, dim) data[i*dim + j] = samples[i][j]*1000.f;
 		FOR(j, dim) ddata[j*samples.size() + i] = samples[i][j]*1000.f;
 	}
-	gmm->init(data, samples.size(), 0); // kmeans initialization
-	//gmm->em(data, samples.size(), 1e-4, COVARIANCE_FULL);
+	gmm->init(data, samples.size(), 0); // random initialization
+
+	// gmm->init(data, samples.size(), 2); // kmeans initialization
+	// gmm->em(data, samples.size(), 1e-4, COVARIANCE_FULL);
+
 	//gmm->initRegression(dim/2);
 	//return;
 

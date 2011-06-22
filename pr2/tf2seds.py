@@ -33,7 +33,7 @@ class BagListener(TransformerROS):
 
 def iszero(arr):
     for e in arr:
-        if math.fabs(e) > 1e-10:
+        if math.fabs(e) > 1e-4:
             return False
     return True
 
@@ -134,20 +134,29 @@ if __name__ == '__main__':
     target_frameid = 'r_gripper_tool_frame'
 
     # collected on bosch pr2
-    bagfiles = ['/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-37-51.bag',
-                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-28.bag',
-                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-55.bag',
-                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-16.bag',
-                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-36.bag',
-                '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-40-07.bag']
+    # bagfiles = ['/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-37-51.bag',
+    #             '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-28.bag',
+    #             '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-38-55.bag',
+    #             '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-16.bag',
+    #             '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-39-36.bag',
+    #             '/home/stober/workspace/ros/seds/data/bags/pr2/2011-06-15-09-40-07.bag']
 
-    outfile = '/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag'
+    # outfile = '/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag'
 
     # collected in simulator
     # bagfiles = ['/home/stober/workspace/ros/bags/sim/2011-06-20-12-57-34.bag',
     #             '/home/stober/workspace/ros/bags/sim/2011-06-20-14-24-31.bag',
     #             '/home/stober/workspace/ros/bags/sim/2011-06-20-18-55-16.bag']
     # outfile = '/home/stober/workspace/ros/bags/sim/seds.bag'
+
+    # collected in simulator
+    bagfiles = ['/home/stober/workspace/ros/seds/data/bags/sim/sp/2011-06-22-16-11-47.bag',
+                '/home/stober/workspace/ros/seds/data/bags/sim/sp/2011-06-22-16-13-17.bag',
+                '/home/stober/workspace/ros/seds/data/bags/sim/sp/2011-06-22-16-14-07.bag',
+                '/home/stober/workspace/ros/seds/data/bags/sim/sp/2011-06-22-16-15-19.bag',
+                '/home/stober/workspace/ros/seds/data/bags/sim/sp/2011-06-22-16-16-17.bag',]
+
+    outfile = '/home/stober/workspace/ros/seds/data/bags/sim/sp/seds.bag'
 
     rospy.init_node('tf2seds')
 

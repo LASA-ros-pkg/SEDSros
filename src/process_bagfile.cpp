@@ -17,6 +17,7 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
     bool first = true;
     uint32_t nsamples = 0;
     int minsize = 0;
+    int maxsize = 0;
 
     // compute average dT
     double avgdt = 0.0;
@@ -94,10 +95,16 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
 
     // normalize trajectory lengths
     minsize = *min_element( tlengths.begin(), tlengths.end() );
+    maxsize = *max_element( tlengths.begin(), tlengths.end() );
     ROS_INFO("Min size: %d", minsize);
+    ROS_INFO("Max size: %d", maxsize);
 
+    // for (int i=0;i<tlengths.size();i++){
+    //   while(trajectories[i].size() > minsize) trajectories[i].pop_back();
+    // }
     for (int i=0;i<tlengths.size();i++){
-      while(trajectories[i].size() > minsize) trajectories[i].pop_back();
+      vector<fvec> trajectory = trajectories[i];
+      trajectories[i] = interpolate(trajectory, maxsize);
     }
 
     // double check

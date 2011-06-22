@@ -31,6 +31,9 @@ if __name__ == '__main__':
     cmd.pose.orientation.z = x[5]
     cmd.pose.orientation.w = x[6]
 
-    print "Publishing cmd: ", str(cmd)
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
 
-    pub.publish(cmd)
+        rospy.loginfo( "Publishing cmd: %s" % str(cmd))
+        pub.publish(cmd)
+        rate.sleep()

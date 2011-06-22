@@ -6,14 +6,17 @@
 #rosservice call seds_server "/home/stober/workspace/ros/seds/data/test.ml" 0 "model_ml.txt"
 #rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/turtle/bag_seds.bag" 1 "/home/stober/workspace/ros/seds/models/model_ts.txt"
 #rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds.bag" 1 "model_pr2.txt"
-rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag" 1 "/home/stober/workspace/ros/seds/models/model_pr2_xyz.txt"
+#rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag" 1 "/home/stober/workspace/ros/seds/models/model_pr2_xyz.txt"
+#rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag" 1 "/home/stober/workspace/ros/seds/models/model_pr2_xyz2.txt"
+#rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag" 1 "/home/stober/workspace/ros/seds/models/model_pr2_xyz_em.txt"
+#rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/sim/sp/seds.bag" 1 "/home/stober/workspace/ros/seds/models/model_sim_xyz_em.txt"
+rosservice call seds_server "/home/stober/workspace/ros/seds/data/bags/pr2/seds_xyz.bag" 1 "/home/stober/workspace/ros/seds/models/modes_pr2_xyz_em_long.txt"
 
 # turtlesim
 
 # rosservice call load_model "/home/stober/workspace/ros/seds/models/model_ts.txt"
 # read
 # rosservice call ds_server "[7.0, 7.0]"
-
 
 # pr2
 

@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     cmd = PoseStamped()
     cmd.header.frame_id = "/torso_lift_link"
-    rate = rospy.Rate(1)
+    rate = rospy.Rate(10)
     while not rospy.is_shutdown():
 
         et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))

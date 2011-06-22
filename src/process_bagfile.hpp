@@ -7,6 +7,7 @@
 #include "rosbag/view.h"
 #include "seds/SedsMessage.h"
 #include "mldemos/types.h"
+#include "mldemos/mymaths.h"
 #include <assert.h>
 
 using namespace std;

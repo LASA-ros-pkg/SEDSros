@@ -140,7 +140,7 @@ optimization seems to fail (see example_optimization.txt):
  and re-run the optimization."
 
 Both SEDS and GMM share a number of parameters, like the number of
-components. As of now I haven't changes any of these parameters much,
+components. As of now I haven't changed any of these parameters much,
 and haven't exposed them to change except through modification of the
 source code. To change them in the code you would most likely need to
 modify src/mldemos/dynamicalSEDS.cpp.

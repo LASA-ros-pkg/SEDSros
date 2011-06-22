@@ -31,6 +31,8 @@ rosbuild_gensrv()
 #rosbuild_add_executable(example examples/example.cpp)
 
 # I don't really understand how to manage builds with cmake ... don't judge me.
+rosbuild_add_executable(teleop_pr2_arms_keyboard src/teleop_pr2_arms_keyboard.cpp)
+
 rosbuild_add_executable(ds_node src/ds_node.cpp
 
 src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp

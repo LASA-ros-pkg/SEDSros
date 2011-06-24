@@ -151,6 +151,20 @@ project:
 
 == Some General Discussion ==
 
+** UPDATE **
+
+I found a major bug. It seems that in mldemos the endpoints of sample
+trajectories were normalized to zero, and the offset was stored for
+testing. In the ROS version, this offset was lost and so the DS
+controller tries to move the endpoint to zero instead of the
+offset. I've updated the code to record the offset from dynamicalSEDS
+in the model parameters file.
+
+There's still some work to do to make sure this offset is computed
+properly.
+
+** END UPDATE **
+
 Testing has shown that the overall sequence of collecting bagfiles,
 learning seds parameters, and running the robot using the learned
 parameters works, but as of now the learned model does not result in
@@ -230,7 +244,22 @@ To get this to work in simulation usually requires running the back at a slower 
 
 == References ==
 
-PR2 Remote Lab URLs
+=== PR2 Remote Lab URLs ===
 * http://mjpeg.pr2-remotelab.com:8080/stream?topic=/remote_lab_cam1/image_raw
 * http://pr2-remotelab.com/demo/wviz.html
 * http://pr2-remotelab.com/demo/wviz_vizonly.html
+
+=== Parameter File Format ===
+
+Based on SEDS.cpp:
+
+First Line: 		d
+Second Line: 		K
+Third Line: 		Priors
+Next 2*d Lines:	Mu
+Next 2*d Lines:	Sigma(:,:,1)
+...
+Next 2*d Lines:	Sigma(:,:,K)
+
+Note: Everything in the GMM is scaled by a factor of 1000x. This scale
+factor holdover from mldemos code.

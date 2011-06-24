@@ -294,7 +294,7 @@ bool SEDS::loadData(const char fileName[], char type)
  * text files use .txt
  * 
  * 	 - If the model file is binary, the structure of the file is 
- *  	 <d (int)> <K (int)> <Priors array of K (double)>
+ *  	 <d (int)> <K (int)> <Offset array of 2*d (double)> <Priors array of K (double)>
  * 		 <Mu(1,:) array of K (double)> ... <Mu(2*d,:) array of K (double)>
  * 		 <Sigma(1,:,1) array of 2*d (double)> ... <Sigma(2*d,:,1) array of 2*d (double)>
  * 			  ...
@@ -303,7 +303,8 @@ bool SEDS::loadData(const char fileName[], char type)
  * 	 - If the file is in the text format, the structure of the file is 
  * 		 First Line: 		d
  * 		 Second Line: 		K
- * 		 Third Line: 		Priors
+ *               Third Line:            Offset
+ * 		 Fourth Line: 		Priors
  * 		 Next 2*d Lines:	Mu
  * 		 Next 2*d Lines:	Sigma(:,:,1)
  * 			 ...
@@ -326,6 +327,10 @@ bool SEDS::loadModel(const char fileName[], char type)
 		//read from file, get d and K etc
 		fread(&d, sizeof(int), 1, file);
 		fread(&K, sizeof(int), 1, file);
+
+		//read Offset
+		Offset.Resize(d * 2);
+		fread(Offset.Array(), sizeof(REALTYPE), d * 2, file);
 		
 		//read prior
 		Priors.Resize(K);
@@ -354,6 +359,10 @@ bool SEDS::loadModel(const char fileName[], char type)
 		}
 		
 		file >> d >> K;
+
+		Offset.Resize(2 * d);
+		for (int i = 0; i < 2*d; i++)
+		  file >> Offset(i);
 
 		Priors.Resize(K);
 		for (int k = 0; k < K; k++)
@@ -385,7 +394,8 @@ bool SEDS::loadModel(const char fileName[], char type)
  * 
  * 				 First Line: 		d
  * 				 Second Line: 		K
- * 				 Third Line: 		Priors
+ *                               Third Line:            Offset
+ * 				 Fourth Line: 		Priors
  * 				 Next 2*d Lines:	Mu
  * 				 Next 2*d Lines:	Sigma(:,:,1)
  * 				 ...
@@ -407,6 +417,10 @@ bool SEDS::saveModel(const char fileName[])
 	file << K << endl << endl; //number of Gaussian
 	
 	file.precision(10); //setting the precision of writing
+
+	for (unsigned int i = 0; i < d * 2; i++)
+	  file << Offset(i) << " ";
+	file << endl <<endl;
 	
 	for (unsigned int k = 0; k < K; k++)
 		file << Priors(k) << " ";

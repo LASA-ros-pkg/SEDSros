@@ -97,6 +97,13 @@ void DynamicalSEDS::Train(std::vector< std::vector<fvec> > trajectories, ivec la
 	//seds->Data.Resize(dim, samples.size());
 	seds->Data = Matrix(ddata, dim, samples.size());
 
+	// offset to goal state -- need to save this in the model parameters file
+	seds->Offset.Resize(dim/2);
+	FOR(i, dim)
+	{
+	  seds->Offset(i) = endpoint[i];
+	}
+
 	// fill in the current model
 	seds->Priors.Resize(nbClusters);
 	seds->Mu.Resize(dim, nbClusters);

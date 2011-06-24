@@ -7,6 +7,7 @@
 #include "seds/DSSrv.h"
 
 Gmm *gmm = NULL;
+fvec endpoint;
 
 bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
 
@@ -18,6 +19,13 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   seds->loadModel(req.filename.c_str());
   int dim = seds->d * 2;
   int nbClusters = seds->K;
+
+  endpoint.resize(dim);
+  FOR(i, dim){
+    endpoint[i] = seds->Offset(i);
+  }
+
+  ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
 
   if (gmm != NULL)
     delete gmm;
@@ -70,7 +78,7 @@ bool dsSRV(seds::DSSrv::Request &req, seds::DSSrv::Response &res){
 
 
   FOR (i, dim){
-    x[i] = req.x[i] * 1000.f; // scale values
+    x[i] = (req.x[i] - endpoint[i])* 1000.f; // offset and scale values
   }
 
   ROS_INFO("Performing regression using SEDS parameters!");

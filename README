@@ -1,3 +1,35 @@
+Seds Notes
+J. Stober
+Last updated: 6.24.2011
+
+== Running Seds ==
+
+=== Short Version ===
+
+1. Collect some sample bagfiles of tf data in a directory.
+
+2. In the scripts directory run:
+
+   ./train.sh <location of directory containing bagfiles> <location of seds bag to write> <location of model parameters to write>
+
+   (e.g. ./train.sh ../data/bags/pr2/20110615/ ../data/bags/pr2/seds/seds.bag ../models/model.txt)
+
+3. In the scripts directory run: *WILL MOVE THE ROBOT*
+
+   ./run.sh <location of model parameters to read>
+
+   (e.g. ./run.sh ../models/model.txt)
+
+(Alt.) To run the ds_server and record the results in a bagfile instead of sending them to the robot:
+
+   ./run_test.sh <location of model parameters to read> <location of bagfile to write>
+
+   (e.g. ./run_test.sh ../models/model.txt ../data/bags/pr2/seds/seds_model.bag)
+
+The bagfile can then be opened in rxbag to give a sense of how the trajectories would look from a few sample starting position.
+
+=== Long Version ===
+
 There are three major components to this demonstration
 project:
 
@@ -9,9 +41,12 @@ project:
    positions (and recording separate /tf bagfiles) will create the set
    of trajectories that SEDS will use as samples for learning.
 
+   The trajectories should be stored in a single directory and should
+   be the only bagfiles in that directory.
+
 1a. Translating rosbags into a usable form.
 
-   - pr2/tf2seds.py
+   - nodes/tf2seds.py
 
    Rosbags with tf messages need to be translated into a form that
    SEDS can understand. This translation process requires iterating
@@ -41,12 +76,12 @@ project:
        uint32	  index
 
    Note that multiple rosbags of tf information need to be written
-   into a single SedsMessage bag. The python script pr2/tf2seds.py
-   does this for bags collected from real or simulated PR2 robots. The
-   script does not take any parameters yet, but it can be set up to
-   run as a proper ROS node in the future. For the moment you should
-   modify the bagfiles list and outfile to point to the input bags you
-   want to process and the location of the SedsMessage bag result.
+   into a single SedsMessage bag. The python script nodes/tf2seds.py
+   does this for bags collected from real or simulated PR2 robots. It
+   is not set up as a ros node.
+
+   Example usage:
+   rosrun seds tf2seds.py <path_to_tf_bag_files> <path_to_seds_bagfile>
 
 2. Running SEDS to learn model parameters.
 
@@ -61,11 +96,12 @@ project:
    third argument tells the service where to write out the SEDS
    parameters.
 
-   Note that seds_server also takes as input data in mldemos form:
+   Note that seds_server also takes as input data in *mldemos* form:
 
    rosservice call seds_server "test.ml" 0 "model_ml.txt"
 
-   This may be useful for testing/comparison with mldemos SEDS code.
+   This may be useful for testing/comparison with mldemos SEDS code
+   but will probably be removed once everything is working.
 
 3. Driving the robot using ADS.
 
@@ -94,7 +130,7 @@ project:
 
    rosservice call ds_server "[0.1, 0.1, 0.1]"
 
-   - pr2/ds_driver.py
+   - ds_driver.py
 
    ds_driver.py is the script that actually drives the robot. The
    mainloop does three things: 1. Reads the current coordinates using a
@@ -105,9 +141,15 @@ project:
    If the model is correct, this loop should drive the robot in much
    the same way as the example trajectories.
 
-   The script pr2/init.sh sets up both ds_node and ds_driver.py.
+   The script scripts/init.sh sets up both ds_node and ds_driver.py
+   but you can start ds_driver.py manually:
 
-Some General Discussion
+   rosrun seds ds_driver.py
+
+   Make sure you have a ds_node running with the proper parameters
+   already loaded.
+
+== Some General Discussion ==
 
 Testing has shown that the overall sequence of collecting bagfiles,
 learning seds parameters, and running the robot using the learned
@@ -131,7 +173,7 @@ a fairly hairy non-linear and non-convex constrained optimization
 problem. Fortunately, the optimization code provides fairly good
 information about the state of the optimization. Unfortunately, when
 run on seds.bag trajectories taken from the real robot, the
-optimization seems to fail (see example_optimization.txt):
+optimization seems to fail (see results/example_optimization.txt):
 
 "Optimization did not reach to an optimal point.
  Some constraints were slightly violated.
@@ -146,7 +188,7 @@ source code. To change them in the code you would most likely need to
 modify src/mldemos/dynamicalSEDS.cpp.
 
 The other potential issue is in the translation of the original bag
-files into SedsMessage format. Line 89 in pr2/tf2seds.py contains some
+files into SedsMessage format. Line 89 in nodes/tf2seds.py contains some
 comments on how bags are constructed. The tf messages are filtered so
 that if dt or dx is zero the message is skipped. I've looked at the
 results in rxbag and the trajectories seem reasonable. Without these
@@ -154,7 +196,7 @@ filter criteria the bags would have lots of duplicate messages where
 nothing changes, which I thought might cause problems for SEDS.
 
 A plot of some of the data we recorded last Wednesday on the PR2 is in
-seds_bag_plot.png.
+results/seds_bag_plot.png.
 
 A related and potentially problematic area is the actual processing of
 SedsMessages into trajectories for SEDS. This code was modeled closely
@@ -167,7 +209,7 @@ similar pre-processing steps for the bag data.
 
 Here's where I think there might be problems:
 
-1. The mechanism for translating /tf into trajectories. (pr2/tf2seds.py line 89)
+1. The mechanism for translating /tf into trajectories. (nodes/tf2seds.py line 89)
 2. Pre-processing these trajectories. (src/process_bagfile.cpp line 106)
 3. Running SEDS with the wrong parameters. (src/mldemos/dynamicalSEDS.cpp)
 3a. SEDS optimization is not working/converging to "bad" local optimum.
@@ -181,3 +223,14 @@ rosbag play bag_with_tf.bag tf:=tf_old
 To get this to work in simulation usually requires running the back at a slower frequency than it was recorded.
 
 2. pr2/publish_rcart.py -- Takes Cartesian coordinates on the command line and publishes them continually to r_cart/command_position. Useful for moving the simulated robot to a set pose.
+
+3. scripts/run_test.sh -- Continually calls ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running ds_driver.py but without the robot.
+
+   Ex. ./run_test.sh ../models/model.txt ../data/bags/pr2/seds/seds_model.bag
+
+== References ==
+
+PR2 Remote Lab URLs
+* http://mjpeg.pr2-remotelab.com:8080/stream?topic=/remote_lab_cam1/image_raw
+* http://pr2-remotelab.com/demo/wviz.html
+* http://pr2-remotelab.com/demo/wviz_vizonly.html

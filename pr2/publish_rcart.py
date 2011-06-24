@@ -16,6 +16,7 @@ import json
 if __name__ == '__main__':
 
     x = json.loads(sys.argv[1])
+
     print "Moving to new coords: ", str(x)
 
     rospy.init_node("publish_rcart")

@@ -39,9 +39,13 @@ void DynamicalSEDS::Train(std::vector< std::vector<fvec> > trajectories, ivec la
 	dim = trajectories[0][0].size();
 	// we forget about time and just push in everything
 	vector<fvec> samples;
-	endpoint = trajectories[0][trajectories[0].size()-1];
-	endpointFast = dim >= 2 ? fVec(endpoint[0], endpoint[1]) : fVec();
-	FOR(d,dim/2) endpoint[d+dim/2] = 0;
+
+	// compute the average endpoint of all the sample trajectories
+	FOR(i, trajectories.size()){
+	  endpoint += trajectories[i][trajectories[i].size()-1];
+	}
+	endpoint /= trajectories.size();
+
 	FOR(i, trajectories.size())
 	{
 		FOR(j, trajectories[i].size())

@@ -14,5 +14,5 @@ sleep 30
 
 echo "Setting up Cartesian controller"
 
-roslaunch teleop_arms jtteleop.launch 
+roslaunch seds jtteleop.launch
 

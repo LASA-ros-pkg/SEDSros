@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: CAT_TRANSFORM.PY
+Program: DS_DRIVER.PY
 Date: Monday, June 20 2011
-Description: Script to display the latest available tf transform in easy to parse format.
+Description: Publishes ds commands to r_cart/command_pose.
 """
 
 import roslib
@@ -16,9 +16,13 @@ import rospy.rostime as rostime
 from geometry_msgs.msg import PoseStamped
 from seds.srv import DSSrv
 import numpy
+import getopt
+import sys
 npa = numpy.array
 
-if __name__ == '__main__':
+def init(vm, feedback):
+
+    rospy.loginfo("Called with vm: %f and feedback: %s" % (vm, str(feedback)))
 
     source_frameid = 'torso_lift_link'
     target_frameid = 'r_gripper_tool_frame'
@@ -42,20 +46,31 @@ if __name__ == '__main__':
     cmd = PoseStamped()
     cmd.header.frame_id = "/torso_lift_link"
     rate = rospy.Rate(100)
+
+    # init some variables
+    et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
+    x = list(et[0][:])
+    rot = list(et[1][:])
+    newx = x
+
     while not rospy.is_shutdown():
 
-        et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
-        t = listener.getLatestCommonTime(source_frameid, target_frameid)
+        # t = listener.getLatestCommonTime(source_frameid, target_frameid)
 
-        rot = list(et[1][:])
-        x = list(et[0][:])
+        # if feedback is true then re-intialize x,rot on every loop using tf
+        if feedback:
+            et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
+            rot = list(et[1][:])
+            x = list(et[0][:])
+        else:
+            x = newx
 
         rospy.loginfo("x: %s" % str(x))
 
         dx = list(ds(x).dx)
 
         rospy.loginfo("dx: %s" % str(dx))
-        newx = list(npa(x) + 25*npa(dx))
+        newx = list(npa(x) + vm * npa(dx))
 
         rospy.loginfo("nx: %s" % str(newx))
 
@@ -72,3 +87,23 @@ if __name__ == '__main__':
         pub.publish(cmd)
 
         rate.sleep()
+        first = False
+
+def main():
+
+    # rospy gets first crack at sys.argv
+    rospy.myargv(argv=sys.argv)
+    (options,args) = getopt.getopt(sys.argv[1:], 'v:f', ['vm=','feedback'])
+
+    vm = 1.0
+    feedback = False
+    for o,a in options:
+        if o in ('-v','--vm'):
+            vm = float(a)
+        elif o in ('-f','--feedback'):
+            feedback = True
+
+    init(vm,feedback) # start node
+
+if __name__ == '__main__':
+    main()

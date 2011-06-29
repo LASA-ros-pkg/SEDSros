@@ -19,7 +19,6 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   seds->loadModel(req.filename.c_str());
   int dim = seds->d * 2;
   int nbClusters = seds->K;
-  fvec endpoint;
 
   endpoint.resize(dim);
   for(int i = 0; i < dim; i++){

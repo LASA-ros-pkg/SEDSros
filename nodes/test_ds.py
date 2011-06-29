@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
             # compute the next step
             dx = list(ds(x).dx)
-            print x,dx
+
             # record x,dx in SedsMessage
             sm.x = x
             sm.dx = dx
@@ -73,7 +73,7 @@ if __name__ == '__main__':
             sm.index = i
 
             outbag.write('seds/trajectories', sm)
-            rospy.loginfo(x)
+            rospy.logdebug(x)
 
             x = list(npa(x) + npa(dx))
             cnt += 1

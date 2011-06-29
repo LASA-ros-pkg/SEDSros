@@ -1,50 +1,27 @@
 #include <algorithm>
 #include "ros/ros.h"
 #include "std_srvs/Empty.h"
-
 #include "seds/SedsOptimize.h"
-#include "mldemos/dynamicalSEDS.h"
-#include "process_mlfile.hpp"
-#include "process_bagfile.hpp"
+#include "seds_wrapper.hpp"
 
 bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &res )
 {
-  DynamicalSEDS seds = DynamicalSEDS();
   vector< vector<fvec> > trajectories;
   float dT;
   ivec labels;
   string filename = req.filename;
+  SEDS *seds = new SEDS();
 
-  ROS_INFO("Called on filetype: %d", req.filetype);
+  // process the input file into trajectories for training
+  process_bagfile(filename, trajectories, dT);
 
-  if (req.filetype == 0){ // an ml file generated using mldemos
+  // set up and perform seds optimization
+  seds_optimize(seds, trajectories, dT);
 
-    // process the input file into trajectories for training
-    process_dataset_manager_file(filename, trajectories, labels, dT);
-    seds.dT = dT;
+  // save the model
+  seds->saveModel(req.outputfile.c_str());
 
-    // train the model
-    seds.Train(trajectories, labels);
-
-    // save the model
-    seds.seds->saveModel(req.outputfile.c_str());
-  } else if (req.filetype == 1){ // a bag file
-
-    // process the input file into trajectories for training
-    process_bagfile(filename, trajectories, labels, dT);
-    seds.dT = dT;
-
-    // train the model
-    seds.Train(trajectories, labels);
-
-    // save the model
-    seds.seds->saveModel(req.outputfile.c_str());
-  } else if (req.filetype == 2){ // a model is already provided
-    ROS_ERROR("Not implemented yet!");
-  } else {
-    ROS_ERROR("Filetype not supported!");
-  }
-
+  delete seds;
   ROS_INFO("All done!");
   return true;
 }

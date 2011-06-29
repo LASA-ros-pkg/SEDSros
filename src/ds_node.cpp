@@ -1,7 +1,7 @@
 #include "std_srvs/Empty.h"
 #include "fgmm/fgmm++.hpp"
-#include "mldemos/SEDS.h"
-#include "mldemos/public.h"
+#include "seds_wrapper.hpp"
+#include "SEDS.h"
 #include "ros/ros.h"
 #include "seds/DSLoad.h"
 #include "seds/DSSrv.h"
@@ -19,9 +19,10 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   seds->loadModel(req.filename.c_str());
   int dim = seds->d * 2;
   int nbClusters = seds->K;
+  fvec endpoint;
 
   endpoint.resize(dim);
-  FOR(i, dim){
+  for(int i = 0; i < dim; i++){
     endpoint[i] = seds->Offset(i);
   }
 
@@ -37,20 +38,17 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   float *mu = new float[dim];
   float *sigma = new float[dim*dim];
 
-  FOR(i, nbClusters)
-    {
-      FOR(d, dim) mu[d] = seds->Mu(d, i);
-      FOR(d1, dim)
-	{
-	  FOR(d2, dim)
-	    {
-	      sigma[d2*dim + d1] = seds->Sigma[i](d1, d2);
-	    }
-	}
-      fgmm_set_prior(gmm->c_gmm, i, seds->Priors(i));
-      fgmm_set_mean(gmm->c_gmm, i, mu);
-      fgmm_set_covar(gmm->c_gmm, i, sigma);
+  for(int i = 0; i < nbClusters; i++){
+    for (int d1 = 0; d1 < dim; d1++){
+      mu[d1] = seds->Mu(d1, i);
+      for (int d2 = 0; d2 < dim; d2++){
+	sigma[d2*dim + d1] = seds->Sigma[i](d1, d2);
+      }
     }
+    fgmm_set_prior(gmm->c_gmm, i, seds->Priors(i));
+    fgmm_set_mean(gmm->c_gmm, i, mu);
+    fgmm_set_covar(gmm->c_gmm, i, sigma);
+  }
 
   delete [] sigma;
   delete [] mu;
@@ -77,8 +75,7 @@ bool dsSRV(seds::DSSrv::Request &req, seds::DSSrv::Response &res){
   float *velocity = new float[dim];
   float *sigma = new float[dim*(dim+1)/2];
 
-
-  FOR (i, dim){
+  for(int i = 0; i < dim; i++){
     x[i] = (req.x[i] - endpoint[i])* 1000.f; // offset and scale values
   }
 
@@ -86,7 +83,7 @@ bool dsSRV(seds::DSSrv::Request &req, seds::DSSrv::Response &res){
 
   gmm->doRegression(x, velocity, sigma);
 
-  FOR (i, dim){
+  for(int i = 0; i < dim; i++){
     res.dx[i] = velocity[i] / 1000.f;
   }
 

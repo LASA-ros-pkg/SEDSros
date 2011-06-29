@@ -1,7 +1,5 @@
 # the filename containing the trajectories for training via SEDS
 string filename
-# the format of the input -- 0 for mldemos type files and 1 for bagfiles (coming soon)
-int8 filetype
 # the file to write the model parameters to when optimization is complete
 string outputfile
 ---

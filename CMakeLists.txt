@@ -33,9 +33,7 @@ rosbuild_gensrv()
 # I don't really understand how to manage builds with cmake ... don't judge me.
 rosbuild_add_executable(teleop_pr2_arms_keyboard src/teleop_pr2_arms_keyboard.cpp)
 
-rosbuild_add_executable(ds_node src/ds_node.cpp
-
-src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp
+rosbuild_add_executable(ds_node src/ds_node.cpp src/SEDS.cpp
 
 src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp
 
@@ -45,9 +43,7 @@ src/MathLib/IKGroupSolver.cpp	 src/MathLib/Matrix3.cpp	src/MathLib/SpatialForce.
 src/MathLib/IKSubSolver.cpp	 src/MathLib/Matrix4.cpp	src/MathLib/SpatialFrame.cpp	src/MathLib/TMatrix.cpp
 src/MathLib/Macros.cpp		 src/MathLib/Matrix.cpp		src/MathLib/SpatialInertia.cpp	src/MathLib/TVector.cpp)
 
-rosbuild_add_executable(seds_node src/seds_node.cpp src/process_mlfile.cpp src/process_bagfile.cpp
-
-src/mldemos/datasetManager.cpp src/mldemos/SEDS.cpp src/mldemos/dynamicalSEDS.cpp src/mldemos/mymaths.cpp
+rosbuild_add_executable(seds_node src/seds_node.cpp src/seds_wrapper.cpp src/SEDS.cpp
 
 src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp
 

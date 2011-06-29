@@ -103,11 +103,13 @@ class GMR(object):
                 self.dim = int(line)
             elif (i == 1):
                 self.ncomps = int(line)
-            elif (i == 3):
+            elif (i == 2):
+                self.dT = float(line)
+            elif (i == 4):
                 self.offset = npa(line.split(),dtype='double')
-            elif (i == 5):
+            elif (i == 6):
                 self.priors = npa(line.split(),dtype='double')
-            elif (i > 5):
+            elif (i > 6):
                 # store all parameters in the raw data array -- use
                 # this to populate mu and sigma objects -- otherwise
                 # indexing gets too incomprehensible
@@ -149,6 +151,7 @@ def load_model(req):
     global gmr
     rospy.loginfo("Loading model %s" % req.filename)
     gmr = GMR(req.filename)
+    rospy.loginfo("dT: %f" % gmr.dT)
     return DSLoadResponse()
 
 def ds_server(req):

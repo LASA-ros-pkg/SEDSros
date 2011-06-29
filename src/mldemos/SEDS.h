@@ -11,6 +11,7 @@
 	public:
 		Vector Priors,p; //Priors of GMM, a vector containing the optimization variable
 		Vector Offset; //Goal offset from 0 
+		double dT; // Sample rate -- write to model file.
 		MathLib::Matrix Data,Mu,*Sigma; //Data=matrix containing demonstrations, Mu=Centers of GMM, Sigma=Covariance matrices of GMM
 		int nData,d,K; //nData=number of datapoints, d=dimension ,K=number of Gaussian components
 		

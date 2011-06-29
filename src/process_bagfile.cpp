@@ -24,6 +24,10 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
     double ct = 0.0;
     double pt = 0.0;
 
+    // some more methods of computing dT
+    vector<double> start_times;
+    vector<double> end_times;
+
     // this first loop collects some statistics about the trajectories
     BOOST_FOREACH(rosbag::MessageInstance const m, view){
 
@@ -67,17 +71,35 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
       ROS_INFO("Traj %d has length %d", i, tlengths[i]);
     }
 
+    start_times.assign(tlengths.size(), 1e12);
+    end_times.assign(tlengths.size(), 0.0);
+
+
+
     // this second loop fills in the trajectory data
     int i = 0;
     int lastindex = 0;
+    ros::Time t;
+    int index;
 
     BOOST_FOREACH(rosbag::MessageInstance const m, view){
       seds::SedsMessage::ConstPtr p = m.instantiate<seds::SedsMessage>();
+
+      index = p->index;
+      t = p->t;
 
       if (lastindex != p->index){
 	// start populating new trajectory data
 	i = 0;
 	lastindex = p->index;
+      }
+
+      if (start_times[p->index] > p->t.toSec()){
+	start_times[p->index] = p->t.toSec();
+      }
+
+      if (end_times[p->index] < p->t.toSec()){
+	end_times[p->index] = p->t.toSec();
       }
 
       // finally we can actually populate the data
@@ -93,20 +115,16 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
       i += 1;
     }
 
+    ROS_INFO("DIFF TIMES:");
+    for(int i=0;i<start_times.size();i++){
+      ROS_INFO("et : %f st : %f diff : %f len: %d dt : %f", end_times[i], start_times[i], end_times[i] - start_times[i], tlengths[i], (end_times[i] - start_times[i]) / tlengths[i]);
+    }
+
     // normalize trajectory lengths
     minsize = *min_element( tlengths.begin(), tlengths.end() );
     maxsize = *max_element( tlengths.begin(), tlengths.end() );
     ROS_INFO("Min size: %d", minsize);
     ROS_INFO("Max size: %d", maxsize);
-
-    // Do we interpolate or truncate? Not sure...
-    // for (int i=0;i<tlengths.size();i++){
-    //   while(trajectories[i].size() > minsize) trajectories[i].pop_back();
-    // }
-    for (int i=0;i<tlengths.size();i++){
-      vector<fvec> trajectory = trajectories[i];
-      trajectories[i] = interpolate(trajectory, maxsize);
-    }
 
     // double check
     for (int i=0;i<tlengths.size();i++){
@@ -117,6 +135,4 @@ void process_bagfile(string filename, vector< vector<fvec> > &trajectories, ivec
     nsamples = minsize * tlengths.size();
     labels.resize(nsamples);
     labels.assign(nsamples,1);
-
-    // set dT
 }

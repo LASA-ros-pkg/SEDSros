@@ -2,6 +2,7 @@
 #define PROCESS_BAGFILE_HPP
 
 #include "ros/ros.h"
+
 #include "boost/foreach.hpp"
 #include "rosbag/bag.h"
 #include "rosbag/view.h"

@@ -103,6 +103,8 @@ void DynamicalSEDS::Train(std::vector< std::vector<fvec> > trajectories, ivec la
 
 	// offset to goal state -- need to save this in the model parameters file
 	seds->Offset.Resize(dim/2);
+
+	seds->dT = dT;
 	FOR(i, dim)
 	{
 	  seds->Offset(i) = endpoint[i];
@@ -141,9 +143,9 @@ void DynamicalSEDS::Train(std::vector< std::vector<fvec> > trajectories, ivec la
 
 //	seds->loadData("../../../Data.txt");
 //	seds->loadModel("../../../Model.txt");
-	seds->Data.Print();
-	seds->Mu.Print();
-	seds->Sigma->Print();
+	//seds->Data.Print();
+	//seds->Mu.Print();
+	//seds->Sigma->Print();
 
 	seds->Optimize();
 

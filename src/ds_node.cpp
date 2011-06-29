@@ -26,6 +26,7 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   }
 
   ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
+  ROS_INFO("Using dT: %f", seds->dT);
 
   if (gmm != NULL)
     delete gmm;

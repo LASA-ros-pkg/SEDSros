@@ -327,6 +327,7 @@ bool SEDS::loadModel(const char fileName[], char type)
 		//read from file, get d and K etc
 		fread(&d, sizeof(int), 1, file);
 		fread(&K, sizeof(int), 1, file);
+		fread(&dT,sizeof(REALTYPE), 1, file);
 
 		//read Offset
 		Offset.Resize(d * 2);
@@ -358,7 +359,7 @@ bool SEDS::loadModel(const char fileName[], char type)
 			return false;
 		}
 		
-		file >> d >> K;
+		file >> d >> K >> dT;
 
 		Offset.Resize(2 * d);
 		for (int i = 0; i < 2*d; i++)
@@ -394,8 +395,9 @@ bool SEDS::loadModel(const char fileName[], char type)
  * 
  * 				 First Line: 		d
  * 				 Second Line: 		K
- *                               Third Line:            Offset
- * 				 Fourth Line: 		Priors
+ *                               Third Line:            dT (Sample Rate)
+ *                               Fourth Line:           Offset
+ * 				 Fifth Line: 		Priors
  * 				 Next 2*d Lines:	Mu
  * 				 Next 2*d Lines:	Sigma(:,:,1)
  * 				 ...
@@ -414,7 +416,8 @@ bool SEDS::saveModel(const char fileName[])
 	}
 	
 	file << d << endl; //dimension
-	file << K << endl << endl; //number of Gaussian
+	file << K << endl; //number of Gaussian
+	file << dT << endl << endl; // sample rate
 	
 	file.precision(10); //setting the precision of writing
 

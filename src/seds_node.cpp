@@ -45,16 +45,6 @@ bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &re
     ROS_ERROR("Filetype not supported!");
   }
 
-  // some initial model testing...
-  fvec sample;
-  sample.push_back(3.0);
-  sample.push_back(3.0);
-  
-  fvec result = seds.Test(sample);
-  for (int i=0;i<result.size();i++){
-    ROS_INFO("res[%d]: %f", i, result[i]);
-  }
-
   ROS_INFO("All done!");
   return true;
 }

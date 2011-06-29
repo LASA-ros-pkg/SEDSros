@@ -7,7 +7,7 @@
 # $3 : location of model parameters to write
 
 # process a set of bagfiles into a seds bag
-rosrun seds tf2seds.py $1 $2
+#rosrun seds tf2seds.py $1 $2
 
 # start the seds_server
 rosrun seds seds_node &

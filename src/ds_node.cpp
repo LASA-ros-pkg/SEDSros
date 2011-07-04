@@ -78,7 +78,7 @@ bool dsSRV(seds::DSSrv::Request &req, seds::DSSrv::Response &res){
     x[i] = (req.x[i] - endpoint[i])* 1000.f; // offset and scale values
   }
 
-  ROS_INFO("Performing regression using SEDS parameters!");
+  ROS_DEBUG("Performing regression using SEDS parameters!");
 
   gmm->doRegression(x, velocity, sigma);
 

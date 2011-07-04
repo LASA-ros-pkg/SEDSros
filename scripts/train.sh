@@ -14,7 +14,13 @@ rosrun seds seds_node &
 
 sleep 2
 
-# process seds bag using seds_server
-rosservice call seds_server $2 1 $3
+# process tf bags into SedsMessage bag
+rosrun seds tf2seds.py $1 tmp.bag
+
+# process SedsMessage bag using seds_server
+rosservice call seds_server tmp.bag $2
+
+# delete the temporary bag -- comment out for debugging
+rm -f tmp.bag
 
 # learning is finished!

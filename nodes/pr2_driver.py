@@ -17,7 +17,10 @@ from geometry_msgs.msg import PoseStamped
 
 from seds.srv import DSSrv
 from seds.srv import DSLoaded
+from seds.srv import FloatSrv, IntSrv
+from seds.srv import SedsModel
 from std_srvs.srv import Empty
+
 
 import numpy
 import getopt
@@ -27,14 +30,14 @@ npa = numpy.array
 import threading
 
 # TODO : add ability to switch to just JTTeleop
-# TODO : add the ability to adjust vm/feedback/rate online
 
 class PR2Driver:
 
-    def __init__(self, vm, feedback, source_frameid, target_frameid, rate):
+    def __init__(self, vm, feedback, source_frameid, target_frameid, rate, waittf):
 
         rospy.loginfo("Initialized with vm: %f and feedback: %s on sf: %s and tf: %s" % (vm, str(feedback), source_frameid, target_frameid))
 
+        self.useseds = True
         self.vm = vm
         self.feedback = feedback
         self.source_frameid = source_frameid
@@ -51,29 +54,64 @@ class PR2Driver:
 
         self.dl = rospy.ServiceProxy('/ds_node/is_loaded', DSLoaded) # check whether the ds_server has a model
         self.ds = rospy.ServiceProxy('/ds_node/ds_server', DSSrv) # the running model
+        self.dsparams = rospy.ServiceProxy('/ds_node/params', SedsModel)
 
         self.startSRV = rospy.Service('/pr2_driver/start', Empty, self.start)
         self.stopSRV = rospy.Service('/pr2_driver/stop', Empty, self.stop)
         self.quitSRV = rospy.Service('/pr2_driver/quit', Empty, self.quit)
+        self.vmSRV = rospy.Service('/pr2_driver/setvm', FloatSrv, self.setvm)
+        self.rateSRV = rospy.Service('/pr2_driver/setrate', IntSrv, self.setrate)
+        self.fbSRV = rospy.Service('/pr2_driver/toggle_feedback', Empty, self.toggleFb)
+        self.toggleSRV = rospy.Service('/pr2_driver/toggle_seds', Empty, self.toggleSeds)
 
         self.zerot = rostime.Time(0)
 
         # wait for the proper /tf transforms
-        rospy.loginfo('Waiting for transform...')
-        tfound = False
-        while not tfound:
-            try:
-                self.listener.waitForTransform(source_frame=source_frameid, target_frame=target_frameid,time=self.zerot,timeout=rostime.Duration(10))
-                tfound = True # no exception
-            except tf.Exception, error:
-                print error
-        rospy.loginfo('Transform found!')
+        if waittf:
+            rospy.loginfo('Waiting for transform...')
+            tfound = False
+            while not tfound:
+                try:
+                    self.listener.waitForTransform(source_frame=source_frameid, target_frame=target_frameid,time=self.zerot,timeout=rostime.Duration(10))
+                    tfound = True # no exception
+                except tf.Exception, error:
+                    print error
+            rospy.loginfo('Transform found!')
 
         self.cmd = PoseStamped()
         self.cmd.header.frame_id = "/" + source_frameid
 
         self.running = False
         self.runningCV = threading.Condition()
+
+    def toggleSeds(self, ignore):
+        self.runningCV.acquire()
+        self.useseds = not self.useseds
+        self.runningCV.release()
+        rospy.loginfo("Toggling seds to %s" % self.useseds)
+        return []
+
+    def setvm(self, req):
+
+        self.runningCV.acquire()
+        self.vm = req.value
+        self.runningCV.release()
+        rospy.loginfo("VM set to %f" % self.vm)
+        return []
+
+    def setrate(self, req):
+        self.runningCV.acquire()
+        self.rate = rospy.Rate(req.value)
+        self.runningCV.release()
+        rospy.loginfo("Rate set to %d" % req.value)
+        return []
+
+    def toggleFb(self, ignore):
+        self.runningCV.acquire()
+        self.feedback = not self.feedback
+        self.runningCV.release()
+        rospy.loginfo("Toggling feedback to %s" % self.feedback)
+        return []
 
     def quit(self, ignore):
         """
@@ -82,7 +120,6 @@ class PR2Driver:
         self.runningCV.acquire()
         self.running = False
         rospy.core.signal_shutdown("quit pr2_driver")
-        self.runningCV.notify()
         self.runningCV.release()
         return []
 
@@ -96,7 +133,6 @@ class PR2Driver:
         self.running = False
         rospy.loginfo("pr2_driver stopping!")
 
-        self.runningCV.notify()
         self.runningCV.release()
         return []
 
@@ -109,6 +145,11 @@ class PR2Driver:
 
         res = self.dl()
         if res.loaded:
+
+            model = self.dsparams()
+            rospy.loginfo("Dim %d" % model.model.dim)
+            self.endpoint = npa(model.model.offset)[:model.model.dim/2]
+            rospy.loginfo("Using endpoint %s" % str(self.endpoint))
 
             # init some variables
             et = self.listener.lookupTransform(self.source_frameid, self.target_frameid, self.zerot)
@@ -137,28 +178,32 @@ class PR2Driver:
                 self.runningCV.acquire()
                 if self.running:
 
-                    # if feedback is true then re-intialize x,rot on every loop using tf
+                    # if feedback is true then re-intialize x on every loop using tf
+                    et = self.listener.lookupTransform(self.source_frameid, self.target_frameid, rostime.Time(0))
+                    self.rot = list(et[1][:])
+
                     if self.feedback:
-                        et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
-                        self.rot = list(et[1][:])
                         self.x = list(et[0][:])
                     else:
                         self.x = self.newx
 
-                    rospy.loginfo("x: %s" % str(self.x))
+                    rospy.logdebug("x: %s" % str(self.x))
 
-                    self.dx = list(self.ds(self.x).dx)
+                    if self.useseds:
+                        self.dx = list(self.ds(self.x).dx)
 
-                    rospy.loginfo("dx: %s" % str(self.dx))
-                    self.newx = list(npa(self.x) + self.vm * npa(self.dx))
+                        rospy.logdebug("dx: %s" % str(self.dx))
+                        self.newx = list(npa(self.x) + self.vm * npa(self.dx))
 
-                    rospy.loginfo("nx: %s" % str(self.newx))
+                        rospy.logdebug("nx: %s" % str(self.newx))
+                    else: # just set the endpoint and let JTTeleop take us there
+                        self.newx = self.endpoint
 
                     self.cmd.pose.position.x = self.newx[0]
                     self.cmd.pose.position.y = self.newx[1]
                     self.cmd.pose.position.z = self.newx[2]
 
-                    # just use the tf pose orientations
+                    # just use the last tf pose orientations
                     self.cmd.pose.orientation.x = self.rot[0]
                     self.cmd.pose.orientation.y = self.rot[1]
                     self.cmd.pose.orientation.z = self.rot[2]
@@ -201,7 +246,7 @@ def main():
         elif o in ('-t','--target'):
             target_frameid = a
 
-    driver = PR2Driver(vm, feedback, source_frameid, target_frameid, rospy.Rate(100)) # start node
+    driver = PR2Driver(vm, feedback, source_frameid, target_frameid, rospy.Rate(100), False) # start node
     driver.spin()
 
 if __name__ == '__main__':

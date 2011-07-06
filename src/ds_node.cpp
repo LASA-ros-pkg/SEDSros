@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 Gmm *gmm = NULL;
 fvec endpoint;
+float dT;
 
 bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
 {
@@ -29,6 +30,7 @@ bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
   seds->loadModel(req.filename.c_str());
   int dim = seds->d * 2;
   int nbClusters = seds->K;
+  dT = seds->dT;
 
   endpoint.resize(dim);
   for(int i = 0; i < dim; i++){
@@ -36,7 +38,7 @@ bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
   }
 
   ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
-  ROS_INFO("Using dT: %f", seds->dT);
+  ROS_INFO("Using dT: %f", dT);
 
   if (gmm != NULL)
     delete gmm;
@@ -68,6 +70,50 @@ bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
   return true;
 }
 
+bool getParamsSRV(seds::SedsModel::Request &req, seds::SedsModel::Response &res)
+{
+  int d;
+
+  if (gmm == NULL){
+    ROS_INFO("You need to load parameters first!");
+    return false;
+  }
+
+  res.model.dim = gmm->dim;
+  res.model.ncomp = gmm->nstates;
+  res.model.dT = dT;
+  d = res.model.dim;
+
+  res.model.offset.resize(d);
+  for (int i = 0; i < d; i++){
+    res.model.offset[i] = endpoint[i];
+  }
+
+  res.model.priors.resize(res.model.ncomp);
+  for (int k = 0; k < res.model.ncomp; k++){
+    res.model.priors[k] = fgmm_get_prior(gmm->c_gmm, k);
+  }
+
+  res.model.mus.resize(d * res.model.ncomp);
+  for(int k = 0; k < res.model.ncomp; k++){
+    for (int i = 0; i < d; i++){
+      res.model.mus[ k * d + i ] = fgmm_get_mean(gmm->c_gmm, k)[i];
+    }
+  }
+
+  res.model.sigmas.resize(d * d * res.model.ncomp);
+  for(int k = 0; k < res.model.ncomp; k++){
+    for (int i = 0; i < d; i++){
+      for (int j = 0; j < d; j++){
+	res.model.sigmas[k * d * d + i * d + j] = fgmm_get_covar_smat(gmm->c_gmm,k)[i *d + j];
+      }
+    }
+  }
+
+  return true;
+}
+
+
 bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
 {
 
@@ -83,6 +129,7 @@ bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
   // now extract the parameters for the gmm!
   int dim = srv.response.model.dim * 2;
   int nbClusters = srv.response.model.ncomp;
+  dT = srv.response.model.dT;
 
   endpoint.resize(dim);
   for(int i = 0; i < dim; i++){
@@ -90,7 +137,7 @@ bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
   }
 
   ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
-  ROS_INFO("Using dT: %f", srv.response.model.dT);
+  ROS_INFO("Using dT: %f", dT);
 
   if (gmm != NULL)
     delete gmm;
@@ -176,6 +223,7 @@ int main(int argc, char **argv)
   ros::ServiceServer load_file_service = n.advertiseService("/ds_node/load_file", loadFileSRV);
   ros::ServiceServer ds_service = n.advertiseService("/ds_node/ds_server", dsSRV);
   ros::ServiceServer ds_loaded = n.advertiseService("/ds_node/is_loaded", isLoadedSRV);
+  ros::ServiceServer ds_params = n.advertiseService("/ds_node/params", getParamsSRV);
 
   ROS_INFO("Ready to control.");
   ros::spin();

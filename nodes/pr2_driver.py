@@ -228,8 +228,8 @@ def main():
 
     rospy.init_node('pr2_driver')
 
-    source_frameid = rospy.get_param("/r_cart/root_name/source_frameid","torso_lift_link")
-    target_frameid = rospy.get_param("/r_cart/tip_name/target_frameid","r_gripper_tool_frame")
+    source_frameid = rospy.get_param("/r_cart/root_name","torso_lift_link")
+    target_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
     vm = rospy.get_param("/pr2_driver/velocity_multiplier", 25.0)
     feedback = rospy.get_param("/pr2_driver/feedback", True)
 

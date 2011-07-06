@@ -157,8 +157,8 @@ def main():
     rospy.init_node("tf2seds")
 
     # should be in tf2seds namespace
-    source_frameid = rospy.get_param("/r_cart/root_name/source_frameid","torso_lift_link")
-    target_frameid = rospy.get_param("/r_cart/tip_name/target_frameid","r_gripper_tool_frame")
+    source_frameid = rospy.get_param("/r_cart/root_name","torso_lift_link")
+    target_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
     path = rospy.get_param("/tf2seds/source_directory", None)
     outfile = rospy.get_param("/tf2seds/outputfile", None)
 

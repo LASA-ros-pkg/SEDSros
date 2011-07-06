@@ -4,7 +4,7 @@
      Node for doing seds-based learning from demonstrations on pr2 and similar robots.
 
   </description>
-  <author>Stober, Grollman, D'Halluin, Khansari -- EPFL-LASA</author>
+  <author>Stober, Grollman, D'Halluin, Khansari, Norris -- EPFL-LASA</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seds</url>

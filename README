@@ -1,32 +1,35 @@
 Seds Notes
 J. Stober
-Last updated: 6.24.2011
-
-TODO: test everything!
+Last updated: 7.6.2011
 
 == Running Seds ==
 
-=== Short Version ===
+The main "walk-through" script is in scripts/master.sh. This script
+prompts the user to record example trajectories, performs optimization
+using SEDS, then drives the robot using pr2_driver.py and the learned
+parameters. For running everything manually (without prompts) see below.
+
+=== Short Version (Manual) ===
 
 1. Collect some sample bagfiles of tf data in a directory.
 
 2. In the scripts directory run:
 
-   ./train.sh <location of directory containing bagfiles> <location of seds bag to write> <location of model parameters to write>
+   ./train.sh <location of directory containing bagfiles>
 
-   (e.g. ./train.sh ../data/bags/pr2/20110615/ ../data/bags/pr2/seds/seds.bag ../models/model.txt)
+   (e.g. ./train.sh ../data/bags/pr2/20110615/ )
 
 3. In the scripts directory run: *WILL MOVE THE ROBOT*
 
-   ./run.sh <location of model parameters to read>
+   ./drive.sh
 
-   (e.g. ./run.sh ../models/model.txt)
+   (e.g. ./run.sh)
 
 (Alt.) To run the ds_server and record the results in a bagfile instead of sending them to the robot:
 
-   ./run_test.sh <location of model parameters to read> <location of bagfile to write>
+   ./run_test.sh <location of bagfile to write>
 
-   (e.g. ./run_test.sh ../models/model.txt ../data/bags/pr2/seds/seds_model.bag)
+   (e.g. ./run_test.sh ../data/bags/pr2/seds/seds_model.bag)
 
 The bagfile can then be opened in rxbag to give a sense of how the trajectories would look from a few sample starting position.
 
@@ -83,27 +86,20 @@ project:
    is not set up as a ros node.
 
    Example usage:
-   rosrun seds tf2seds.py <path_to_tf_bag_files> <path_to_seds_bagfile>
+   rosrun seds tf2seds.py -b <path_to_tf_bag_files> -o <path_to_seds_bagfile>
 
 2. Running SEDS to learn model parameters.
 
    Running SEDS is as easy as "rosrun seds seds_node". This starts the
-   seds_node which makes available a single service "seds_server"
+   seds_node which makes available a single service "seds/optimize"
    which takes arguments of the following form:
 
-   rosservice call seds_server "seds.bag" 1 "model.txt"
+   rosservice call seds/optimize"seds.bag"
 
    The first argument is the location of a SedsMessage bag. The second
-   argument tells seds_server the kind of input (SedsMessage). The
+   argument tells /seds/optimize the kind of input (SedsMessage). The
    third argument tells the service where to write out the SEDS
    parameters.
-
-   Note that seds_server also takes as input data in *mldemos* form:
-
-   rosservice call seds_server "test.ml" 0 "model_ml.txt"
-
-   This may be useful for testing/comparison with mldemos SEDS code
-   but will probably be removed once everything is working.
 
 3. Driving the robot using ADS.
 
@@ -115,13 +111,15 @@ project:
    rosrun seds ds_node
 
    The ds_node provides two services. The first is load_model which
-   takes a filename as an argument. The filename should point to a
-   parameter file generated using the seds_node in step 2, and should
-   be called before any other calls.
+   loads parameters from a running seds_node.
 
-   rosservice call load_model "model.txt"
+   rosservice call /ds_node/load_model
 
-   The next service is ds_server and is meant to be called from within
+   You can also load from a file (generated using seds_node seds/savefile).
+
+   rosservice call /ds_node/load_file <file>
+
+   The next service is /ds_node/ds_server and is meant to be called from within
    the main loop of a controlling node. This service takes as
    arguments an array of floats x (representing the current Cartesian
    coordinates) and returns another array of floats dx. See the DSSrv
@@ -130,13 +128,13 @@ project:
    For debugging purposes, this service can be called on the command
    line with an array of sample coordinates:
 
-   rosservice call ds_server "[0.1, 0.1, 0.1]"
+   rosservice call /ds_node/ds_server "[0.1, 0.1, 0.1]"
 
    - ds_driver.py
 
    ds_driver.py is the script that actually drives the robot. The
    mainloop does three things: 1. Reads the current coordinates using a
-   TF Listener. 2. Sends these to ds_server and reads the
+   TF Listener. 2. Sends these to /ds_node/ds_server and reads the
    response. 3. Composes new coordinates x+dx and publishes these to the
    r_cart/command_pose topic.
 
@@ -151,85 +149,28 @@ project:
    Make sure you have a ds_node running with the proper parameters
    already loaded.
 
-== Some General Discussion ==
+== Current Issues ==
 
-** UPDATE **
+Velocity Problem:
 
-I found a major bug. It seems that in mldemos the endpoints of sample
-trajectories were normalized to zero, and the offset was stored for
-testing. In the ROS version, this offset was lost and so the DS
-controller tries to move the endpoint to zero instead of the
-offset. I've updated the code to record the offset from dynamicalSEDS
-in the model parameters file.
+So, with run_test, it looks like the system does exactly the right
+thing, which is great.  Unfortunately, this doesn't seem to carry over
+to the real robot (and to a lesser extent, in simulation).  I think I
+know what the problem is.  At some position x, the computed delta dx
+isn't different enough to cause the cartesian controller to actually
+move the arm.  So the arm stays where it is, and nothing changes.  I've
+some theories:
 
-There's still some work to do to make sure this offset is computed
-properly.
+1) Friction not being modeled in the controller
+2) Bad controller (maybe we should try the Jinv controller?)
+3) our velocities are too small (making issues 1 and 2 more apparent)
 
-** END UPDATE **
+I focused on 3, because I remember Mohammad telling me something about
+how setting dT correctly is very important, even though mathematically
+it shouldn't matter.  So for today, I threw in a multiplier on the
+velocity, and that seemed to make the problem go away.
 
-Testing has shown that the overall sequence of collecting bagfiles,
-learning seds parameters, and running the robot using the learned
-parameters works, but as of now the learned model does not result in
-the behavior that we expect.
-
-To aid in debugging the process I'll try to point out some hot spots
-in various parts of the process where the code may not be
-correct. First, there are two major black boxes whose behavior I don't
-entirely understand. The first is the fgmm code for running the
-gmm regression using model parameters learned using SEDS. The second is
-the optimization process for SEDS.
-
-The fgmm code is probably reasonably easy to replace, but in order
-to get ads working for Wednesday's test, I decided to borrow heavily
-from mldemos when creating the ds_node. As of now I'm not sure if this
-code is causing problems.
-
-The second major black box is the SEDS code itself, which consists of
-a fairly hairy non-linear and non-convex constrained optimization
-problem. Fortunately, the optimization code provides fairly good
-information about the state of the optimization. Unfortunately, when
-run on seds.bag trajectories taken from the real robot, the
-optimization seems to fail (see results/example_optimization.txt):
-
-"Optimization did not reach to an optimal point.
- Some constraints were slightly violated.
- The error may be due to change of hard constraints to soft constraints.
- To handle this error, increase the value of 'cons_penalty'
- and re-run the optimization."
-
-Both SEDS and GMM share a number of parameters, like the number of
-components. As of now I haven't changed any of these parameters much,
-and haven't exposed them to change except through modification of the
-source code. To change them in the code you would most likely need to
-modify src/mldemos/dynamicalSEDS.cpp.
-
-The other potential issue is in the translation of the original bag
-files into SedsMessage format. Line 89 in nodes/tf2seds.py contains some
-comments on how bags are constructed. The tf messages are filtered so
-that if dt or dx is zero the message is skipped. I've looked at the
-results in rxbag and the trajectories seem reasonable. Without these
-filter criteria the bags would have lots of duplicate messages where
-nothing changes, which I thought might cause problems for SEDS.
-
-A plot of some of the data we recorded last Wednesday on the PR2 is in
-results/seds_bag_plot.png.
-
-A related and potentially problematic area is the actual processing of
-SedsMessages into trajectories for SEDS. This code was modeled closely
-after mldemos, which either interpolates or truncates to make sure all
-the trajectories have the same number of samples. See line 102 in
-src/process_bagfile.cpp for details. MLDemos also has other options
-for pre-processing trajectories, like centering and normalizing the
-endpoints of every sample trajectory. I have not had a chance to try
-similar pre-processing steps for the bag data.
-
-Here's where I think there might be problems:
-
-1. The mechanism for translating /tf into trajectories. (nodes/tf2seds.py line 89)
-2. Pre-processing these trajectories. (src/process_bagfile.cpp line 106)
-3. Running SEDS with the wrong parameters. (src/mldemos/dynamicalSEDS.cpp)
-3a. SEDS optimization is not working/converging to "bad" local optimum.
-4. fgmm code is broken, not used correctly. (src/ds_node.cpp)
+== Other Tools ==
 
 Some other code that might be useful:
 1. pr2/run_tf_bag.py -- This script reads /tf_old topic and published to r_cart/command_pose. The idea is that you can replay bags using this by running
@@ -240,9 +181,9 @@ To get this to work in simulation usually requires running the back at a slower 
 
 2. pr2/publish_rcart.py -- Takes Cartesian coordinates on the command line and publishes them continually to r_cart/command_position. Useful for moving the simulated robot to a set pose.
 
-3. scripts/run_test.sh -- Continually calls ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running ds_driver.py but without the robot.
+3. scripts/run_test.sh -- Continually calls /ds_node/ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running ds_driver.py but without the robot.
 
-   Ex. ./run_test.sh ../models/model.txt ../data/bags/pr2/seds/seds_model.bag
+   Ex. ./run_test.sh ../data/bags/pr2/seds/seds_model.bag
 
 == References ==
 

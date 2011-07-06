@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # This is the master script for recording, training, then driving the robot using SEDS-based control.
 
@@ -18,7 +18,7 @@ function record_bag {
 
     read
     kill -2 $ID # send a SIGINT signal to kill the recording process
-    
+
     # return to original directory
     cd -
 }

@@ -24,11 +24,11 @@ if __name__ == '__main__':
     rospy.init_node('test_ds')
     rospy.myargv(argv=sys.argv)
 
-    rospy.wait_for_service("load_model")
-    lm = rospy.ServiceProxy("load_model", Empty)
+    rospy.wait_for_service("/ds_node/load_model")
+    lm = rospy.ServiceProxy("/ds_node/load_model", Empty)
 
-    rospy.wait_for_service('ds_server')
-    ds = rospy.ServiceProxy('ds_server', DSSrv)
+    rospy.wait_for_service('/ds_node/ds_server')
+    ds = rospy.ServiceProxy('/ds_node/ds_server', DSSrv)
 
     # arg 1 is the model
     # arg 2 is the outbag filename

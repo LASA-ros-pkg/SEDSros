@@ -7,9 +7,10 @@ rosrun seds ds_node &
 #rosrun seds gmr.py &
 sleep 2
 
-rosservice call load_model $1
+rosservice call /ds_node/load_file $1
 sleep 2
 
 # iteratively calls ds_server on latest tf position and publishes the result to r_cart/command_pose
-rosrun seds ds_driver.py --vm 25 --feedback
-#rosrun seds ds_driver.py --vm 1.0
+rosrun seds pr2_driver.py --vm 25 --feedback &
+
+rosservice call seds /pr2_driver/start

@@ -13,6 +13,7 @@ import rospy
 
 import math
 import numpy
+import getopt
 npa = numpy.array
 
 from tf import TransformerROS, LookupException
@@ -121,33 +122,19 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # sometimes not enough info is recorded to complete the transform lookup
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
 
-
         # end of current bag -- write out last entry with dx = 0
         cm.dx = npa(cm.x) - npa(pm.x)
         outbag.write('seds/trajectories', cm)
 
         bag.close()
+
     rospy.loginfo("Writing bag: %s" % outfilename)
     outbag.close() # very important to close a rosbag after writing
 
-if __name__ == '__main__':
-
-    source_frameid = 'torso_lift_link'
-    target_frameid = 'r_gripper_tool_frame'
-
-    rospy.init_node("tf2seds")
-    rospy.myargv(argv=sys.argv)
-
-    # arg 1 should point to a directory containing only the bagfiles you want to process.
-    path = os.path.normpath(sys.argv[1])
-    bagfiles = glob.glob(path + "/*.bag")
-    bagfiles.sort()
-
-    # arg 2 should point to the bagfile you want to write
-    outfile = sys.argv[2]
+def main():
 
     #Example usage:
-    #rosrun tf2seds.py <path_to_tf_bag_files> <path_to_seds_bagfile>
+    #rosrun tf2seds.py -b <path_to_tf_bag_files> -o <path_to_seds_bagfile>
 
     """
     Rotations may cause a problem for SEDS optimization. The
@@ -162,4 +149,41 @@ if __name__ == '__main__':
     So right now process_bags only uses x,y,z position information.
     """
 
+
+    # rospy gets first crack at sys.argv
+    rospy.myargv(argv=sys.argv)
+    (options,args) = getopt.getopt(sys.argv[1:], 'b:o:s:t:', ['bags=','ouptut=','source=','target='])
+
+    rospy.init_node("tf2seds")
+
+    # should be in tf2seds namespace
+    source_frameid = rospy.get_param("/r_cart/root_name/source_frameid","torso_lift_link")
+    target_frameid = rospy.get_param("/r_cart/tip_name/target_frameid","r_gripper_tool_frame")
+    path = rospy.get_param("/tf2seds/source_directory", None)
+    outfile = rospy.get_param("/tf2seds/outputfile", None)
+
+    # or specify any of these options on the command line
+    for o,a in options:
+        if o in ('-b','--bags'):
+            path = a
+        elif o in ('-o','--output'):
+            outfile = a
+        elif o in ('-s','--source'):
+            source_frameid = a
+        elif o in ('-t','--target'):
+            target_frameid = a
+
+    if not path or not outfile:
+        raise Exception, "You must specify bagfile input and output locations."
+
+    bagfiles = glob.glob(os.path.normpath(path + "/*.bag"))
+    bagfiles.sort() # given the default naming these should be sorted by time
+
+    rospy.loginfo("dir: %s out: %s sf: %s tf: %s", path, outfile, source_frameid, target_frameid)
+
+
     process_bags(outfile, bagfiles, source_frameid,target_frameid)
+
+
+if __name__ == '__main__':
+    main()

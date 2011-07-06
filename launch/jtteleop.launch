@@ -1,4 +1,5 @@
 <launch>
+
  <node name="stop_r_arm"
     pkg="pr2_controller_manager" type="pr2_controller_manager"
     args="stop r_arm_controller" />
@@ -37,6 +38,7 @@
    vel_saturation_trans: 2.0
    vel_saturation_rot: 4.0
  </rosparam>
+
 <node name="spawn_cart"
        pkg="pr2_controller_manager" type="spawner"
        args="r_cart" />

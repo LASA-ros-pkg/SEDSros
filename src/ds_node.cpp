@@ -3,18 +3,28 @@
 #include "seds_wrapper.hpp"
 #include "SEDS.h"
 #include "ros/ros.h"
-#include "seds/DSLoad.h"
 #include "seds/DSSrv.h"
-
+#include "seds/SedsModel.h"
+#include "seds/FileIO.h"
+#include "seds/DSLoaded.h"
+#include "std_srvs/Empty.h"
+#include <sys/stat.h>
 Gmm *gmm = NULL;
 fvec endpoint;
 
-bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
-
-  // load model parameters
+bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
+{
   SEDS *seds = new SEDS();
 
   ROS_INFO("Loading model: %s", req.filename.c_str());
+
+  // check for file existance
+  struct stat stFileInfo;
+  int intStat = stat(req.filename.c_str(),&stFileInfo);
+  if (intStat != 0){
+    ROS_INFO("File does not exist!");
+    return false;
+  }
 
   seds->loadModel(req.filename.c_str());
   int dim = seds->d * 2;
@@ -54,6 +64,70 @@ bool loadSRV(seds::DSLoad::Request &req, seds::DSLoad::Response &res){
   delete seds;
 
   gmm->initRegression(dim/2);
+
+  return true;
+}
+
+bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
+{
+
+  ROS_INFO("Loading parameters from running SEDS NODE.");
+
+  ros::NodeHandle n;
+  ros::ServiceClient client = n.serviceClient<seds::SedsModel>("/seds/params");
+  seds::SedsModel srv;
+
+  // make the call to seds for the parameters
+  client.call(srv);
+
+  // now extract the parameters for the gmm!
+  int dim = srv.response.model.dim * 2;
+  int nbClusters = srv.response.model.ncomp;
+
+  endpoint.resize(dim);
+  for(int i = 0; i < dim; i++){
+    endpoint[i] = srv.response.model.offset[i];
+  }
+
+  ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
+  ROS_INFO("Using dT: %f", srv.response.model.dT);
+
+  if (gmm != NULL)
+    delete gmm;
+
+  gmm = new Gmm(nbClusters,dim);
+
+  // and we copy the values back to the source
+  float *mu = new float[dim];
+  float *sigma = new float[dim*dim];
+
+  for(int k = 0; k < nbClusters; k++){
+    for (int i = 0; i < dim; i++){
+      mu[i] = srv.response.model.mus[k * dim + i];
+      for (int j = 0; j < dim; j++){
+	sigma[i * dim + j] = srv.response.model.sigmas[k * dim * dim + i * dim + j];
+      }
+    }
+    fgmm_set_prior(gmm->c_gmm, k, srv.response.model.priors[k]);
+    fgmm_set_mean(gmm->c_gmm, k, mu);
+    fgmm_set_covar(gmm->c_gmm, k, sigma);
+  }
+
+  delete [] sigma;
+  delete [] mu;
+
+  gmm->initRegression(dim/2);
+
+  return true;
+}
+
+bool isLoadedSRV(seds::DSLoaded::Request &req, seds::DSLoaded::Response &res){
+
+  if (gmm == NULL){
+    res.loaded = false;
+  } else {
+    res.loaded = true;
+  }
 
   return true;
 }
@@ -98,8 +172,10 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "ds_server");
   ros::NodeHandle n;
 
-  ros::ServiceServer load_model_service = n.advertiseService("load_model", loadSRV);
-  ros::ServiceServer ds_service = n.advertiseService("ds_server", dsSRV);
+  ros::ServiceServer load_model_service = n.advertiseService("/ds_node/load_model", loadSRV);
+  ros::ServiceServer load_file_service = n.advertiseService("/ds_node/load_file", loadFileSRV);
+  ros::ServiceServer ds_service = n.advertiseService("/ds_node/ds_server", dsSRV);
+  ros::ServiceServer ds_loaded = n.advertiseService("/ds_node/is_loaded", isLoadedSRV);
 
   ROS_INFO("Ready to control.");
   ros::spin();

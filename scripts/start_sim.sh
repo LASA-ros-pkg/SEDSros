@@ -10,6 +10,8 @@ echo "Launching PR2 Simulator"
 
 roslaunch pr2_gazebo pr2_empty_world.launch &
 
+roslaunch 
+
 sleep 30
 
 echo "Setting up Cartesian controller"

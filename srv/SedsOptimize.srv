@@ -1,5 +1,5 @@
 # the filename containing the trajectories for training via SEDS
 string filename
 # the file to write the model parameters to when optimization is complete
-string outputfile
+# string outputfile
 ---

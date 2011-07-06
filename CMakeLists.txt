@@ -30,25 +30,23 @@ rosbuild_gensrv()
 #target_link_libraries(example ${PROJECT_NAME})
 #rosbuild_add_executable(example examples/example.cpp)
 
+rosbuild_add_library(fgmm src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp)
+
+rosbuild_add_library(mathlib 
+src/MathLib/Differentiator.cpp	 src/MathLib/MathLibCommon.cpp	src/MathLib/ReferenceFrame.cpp	src/MathLib/SpatialMatrix.cpp	 src/MathLib/Vector3.cpp
+src/MathLib/GradientDescent.cpp  src/MathLib/MathLib.cpp	src/MathLib/Regression.cpp	src/MathLib/SpatialVector.cpp	 src/MathLib/Vector.cpp
+src/MathLib/IKGroupSolver.cpp	 src/MathLib/Matrix3.cpp	src/MathLib/SpatialForce.cpp	src/MathLib/SpatialVelocity.cpp
+src/MathLib/IKSubSolver.cpp	 src/MathLib/Matrix4.cpp	src/MathLib/SpatialFrame.cpp	src/MathLib/TMatrix.cpp
+src/MathLib/Macros.cpp		 src/MathLib/Matrix.cpp		src/MathLib/SpatialInertia.cpp	src/MathLib/TVector.cpp)
+
 # I don't really understand how to manage builds with cmake ... don't judge me.
 rosbuild_add_executable(teleop_pr2_arms_keyboard src/teleop_pr2_arms_keyboard.cpp)
 
-rosbuild_add_executable(ds_node src/ds_node.cpp src/SEDS.cpp
+rosbuild_add_executable(ds_node src/ds_node.cpp src/SEDS.cpp)
+target_link_libraries(ds_node fgmm)
+target_link_libraries(ds_node mathlib)
 
-src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp
+rosbuild_add_executable(seds_node src/seds_node.cpp src/seds_wrapper.cpp src/SEDS.cpp)
+target_link_libraries(seds_node fgmm)
+target_link_libraries(seds_node mathlib)
 
-src/MathLib/Differentiator.cpp	 src/MathLib/MathLibCommon.cpp	src/MathLib/ReferenceFrame.cpp	src/MathLib/SpatialMatrix.cpp	 src/MathLib/Vector3.cpp
-src/MathLib/GradientDescent.cpp  src/MathLib/MathLib.cpp	src/MathLib/Regression.cpp	src/MathLib/SpatialVector.cpp	 src/MathLib/Vector.cpp
-src/MathLib/IKGroupSolver.cpp	 src/MathLib/Matrix3.cpp	src/MathLib/SpatialForce.cpp	src/MathLib/SpatialVelocity.cpp
-src/MathLib/IKSubSolver.cpp	 src/MathLib/Matrix4.cpp	src/MathLib/SpatialFrame.cpp	src/MathLib/TMatrix.cpp
-src/MathLib/Macros.cpp		 src/MathLib/Matrix.cpp		src/MathLib/SpatialInertia.cpp	src/MathLib/TVector.cpp)
-
-rosbuild_add_executable(seds_node src/seds_node.cpp src/seds_wrapper.cpp src/SEDS.cpp
-
-src/fgmm/em.cpp src/fgmm/gaussian.cpp src/fgmm/gmm.cpp src/fgmm/gmmregression.cpp src/fgmm/smat.cpp src/fgmm/update.cpp
-
-src/MathLib/Differentiator.cpp	 src/MathLib/MathLibCommon.cpp	src/MathLib/ReferenceFrame.cpp	src/MathLib/SpatialMatrix.cpp	 src/MathLib/Vector3.cpp
-src/MathLib/GradientDescent.cpp  src/MathLib/MathLib.cpp	src/MathLib/Regression.cpp	src/MathLib/SpatialVector.cpp	 src/MathLib/Vector.cpp
-src/MathLib/IKGroupSolver.cpp	 src/MathLib/Matrix3.cpp	src/MathLib/SpatialForce.cpp	src/MathLib/SpatialVelocity.cpp
-src/MathLib/IKSubSolver.cpp	 src/MathLib/Matrix4.cpp	src/MathLib/SpatialFrame.cpp	src/MathLib/TMatrix.cpp
-src/MathLib/Macros.cpp		 src/MathLib/Matrix.cpp		src/MathLib/SpatialInertia.cpp	src/MathLib/TVector.cpp)

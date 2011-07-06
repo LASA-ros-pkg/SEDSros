@@ -11,8 +11,8 @@ roslib.load_manifest('seds')
 import rospy
 import rospy.rostime as rostime
 
+from std_srvs.srv import Empty
 from seds.srv import DSSrv
-from seds.srv import DSLoad
 from seds.msg import SedsMessage
 
 import rosbag
@@ -25,7 +25,7 @@ if __name__ == '__main__':
     rospy.myargv(argv=sys.argv)
 
     rospy.wait_for_service("load_model")
-    lm = rospy.ServiceProxy("load_model", DSLoad)
+    lm = rospy.ServiceProxy("load_model", Empty)
 
     rospy.wait_for_service('ds_server')
     ds = rospy.ServiceProxy('ds_server', DSSrv)
@@ -34,9 +34,10 @@ if __name__ == '__main__':
     # arg 2 is the outbag filename
 
     # load the model we want to test
-    lm(sys.argv[1])
+    # lm(sys.argv[1])
+    lm()
 
-    outbag = rosbag.Bag(sys.argv[2], 'w')
+    outbag = rosbag.Bag(sys.argv[1], 'w')
     sm = SedsMessage()
 
     # for bagfiles collected on 6/15

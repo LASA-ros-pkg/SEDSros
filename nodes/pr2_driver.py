@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: DS_DRIVER.PY
+Program: PR2_DRIVER.PY
 Date: Monday, June 20 2011
 Description: Publishes ds commands to r_cart/command_pose.
 """
@@ -21,15 +21,12 @@ from seds.srv import FloatSrv, IntSrv
 from seds.srv import SedsModel
 from std_srvs.srv import Empty
 
-
 import numpy
 import getopt
 import sys
 npa = numpy.array
 
 import threading
-
-# TODO : add ability to switch to just JTTeleop
 
 class PR2Driver:
 
@@ -234,7 +231,7 @@ def main():
     source_frameid = rospy.get_param("/r_cart/root_name/source_frameid","torso_lift_link")
     target_frameid = rospy.get_param("/r_cart/tip_name/target_frameid","r_gripper_tool_frame")
     vm = rospy.get_param("/pr2_driver/velocity_multiplier", 25.0)
-    feedback = rospy.get_param("/pr2_driver/feedback", False)
+    feedback = rospy.get_param("/pr2_driver/feedback", True)
 
     for o,a in options:
         if o in ('-v','--vm'):

@@ -6,6 +6,7 @@
   </description>
   <author>Stober, Grollman, D'Halluin, Khansari, Norris -- EPFL-LASA</author>
   <review status="unreviewed" notes=""/>
+  <license>LGPL</license>
   <url>http://ros.org/wiki/seds</url>
 
   <depend package="roscpp" />

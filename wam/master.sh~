@@ -91,7 +91,7 @@ mkdir -p $ddir
 # launch_silent seds jtteleop.launch &
 
 # This starts up seds and ds and pr2_driver nodes which will be used for learning and controlling the robot.
-launch_silent seds pr2.launch &
+launch_silent seds seds.launch &
 
 # Stop the controller for the moment while we record bagfiles.
 # rosrun pr2_controller_manager pr2_controller_manager stop r_cart

@@ -5,7 +5,6 @@
 
   </description>
   <author>Stober, Grollman, D'Halluin, Khansari, Norris -- EPFL-LASA</author>
-  <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/seds</url>
 
@@ -14,7 +13,6 @@
   <depend package="std_msgs" />
   <depend package="geometry_msgs"/>
   <depend package="std_srvs" />
-  <depend package="turtlesim" />
   <depend package="rospy" />
   <depend package="rosbag" />
   <depend package="tf" />

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: CAT_TRANSFORM.PY
+Program: CAT_TF.PY
 Date: Monday, June 20 2011
 Description: Script to display the latest available tf transform in easy to parse format.
 """

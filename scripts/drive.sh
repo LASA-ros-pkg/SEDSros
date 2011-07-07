@@ -1,7 +1,5 @@
 #!/bin/bash -x
 
-#export ROS_MASTER_URI=http://lasapc7:11311
-
 # setup the ds_node with the current model
 rosrun seds ds_node &
 sleep 2

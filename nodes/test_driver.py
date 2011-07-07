@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: TEST_DS.PY
+Program: TEST_DRIVER.PY
 Date: Thursday, June 23 2011
 Description: Test the current DS server by recording sample trajectories into a bagfile for analysis.
 """

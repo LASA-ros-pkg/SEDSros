@@ -130,9 +130,9 @@ project:
 
    rosservice call /ds_node/ds_server "[0.1, 0.1, 0.1]"
 
-   - ds_driver.py
+   - pr2_driver.py
 
-   ds_driver.py is the script that actually drives the robot. The
+   pr2_driver.py is the script that actually drives the robot. The
    mainloop does three things: 1. Reads the current coordinates using a
    TF Listener. 2. Sends these to /ds_node/ds_server and reads the
    response. 3. Composes new coordinates x+dx and publishes these to the
@@ -141,10 +141,10 @@ project:
    If the model is correct, this loop should drive the robot in much
    the same way as the example trajectories.
 
-   The script scripts/init.sh sets up both ds_node and ds_driver.py
-   but you can start ds_driver.py manually:
+   The script scripts/init.sh sets up both ds_node and pr2_driver.py
+   but you can start pr2_driver.py manually:
 
-   rosrun seds ds_driver.py
+   rosrun seds pr2_driver.py
 
    Make sure you have a ds_node running with the proper parameters
    already loaded.
@@ -181,7 +181,7 @@ To get this to work in simulation usually requires running the back at a slower 
 
 2. pr2/publish_rcart.py -- Takes Cartesian coordinates on the command line and publishes them continually to r_cart/command_position. Useful for moving the simulated robot to a set pose.
 
-3. scripts/run_test.sh -- Continually calls /ds_node/ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running ds_driver.py but without the robot.
+3. scripts/run_test.sh -- Continually calls /ds_node/ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running pr2_driver.py but without the robot.
 
    Ex. ./run_test.sh ../data/bags/pr2/seds/seds_model.bag
 

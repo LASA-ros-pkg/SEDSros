@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: CAT_TRANSFORM.PY
+Program: RUN_TF_BAG.PY
 Date: Monday, June 20 2011
 Description: Replay tf coordinates as control commands.
 """

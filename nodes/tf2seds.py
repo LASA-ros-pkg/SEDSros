@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: tf2seds.py
+Program: TF2SEDS.py
 Date: Monday, June 20 2011
 Description: Create a seds message bag out of a set of bagfiles that record /tf trajectories.
 """

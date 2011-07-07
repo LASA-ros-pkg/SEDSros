@@ -1,7 +1,0 @@
-#! /usr/bin/env python
-"""
-Author: Jeremy M. Stober
-Program: WAM2SEDS.PY
-Date: Monday, July 7th, 2011
-Description: Create a bagfile of SedsMessages for optimization.
-"""

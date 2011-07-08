@@ -27,16 +27,15 @@ function run_demo {
     ndemo=1
     OPTIONS="Record Learn Run Quit"
     while [ 1 ]; do
-
-      #clear
-      echo "Please select one of the following options."
-      select opt in $OPTIONS; do
-	if [ "$opt" = "Quit" ]; then
+	echo "Please select one of the following options."
+	select opt in $OPTIONS; do
+	    if [ "$opt" = "Quit" ]; then
 	  echo "Quiting..."
 	  exit
 	elif [ "$opt" = "Record" ]; then
-	  record_bag $ddir $ndemo
-	  let ndemo=ndemo+1
+	    rosservice call /wam/idle
+	    record_bag $ddir $ndemo
+	    let ndemo=ndemo+1
 	elif [ "$opt" = "Learn" ]; then
 
 	    echo "Beginning the training process!"
@@ -55,7 +54,20 @@ function run_demo {
 	    echo "Model is learned and loaded."
 	  break
 	elif [ "$opt" = "Run" ]; then
-	    echo "Not implemented yet!"
+
+	  rosservice call /wam/idle
+	  echo "Move the wam to a test position and press enter!"
+	  read
+
+	  echo "Activating wam and calling wam driver!"
+	  rosservice call /wam/active # put wam under active control
+	  rosservice call /wam_driver/start # starts the driver service
+
+	  echo "Press enter to stop driving the robot."
+	  read
+	  rosservice call /wam_driver/stop
+	  rosservice call /wam/idle
+
 	else
 	  #clear
 	  echo "Bad option!"
@@ -70,17 +82,6 @@ ddir=$1
 mkdir -p $ddir
 
 launch_silent seds wam.launch &
-
-# move to the start position
-echo "Press enter to move the wam to the start position!"
-
-read
-rosservice call /wam/moveToPos "{pos: {radians: [0.031373526540086058, 0.7948185344899199, -0.049580406514594152, 2.2492436302447012, 0.32928795377115966, 0.055339793705030269, -0.88494097071019928]}}"
-
-echo "Press enter to turn on passive mode!"
-read 
-rosservice call /wam/switchMode 0
-rosservice call /wam/active_passive "[0, 0, 0, 0, 0, 0, 0]"
 
 # Run the demo.
 run_demo

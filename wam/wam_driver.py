@@ -14,7 +14,6 @@ import tf
 import rospy
 import rospy.rostime as rostime
 
-from wam_msgs.msg import CartesianTargets
 from wam_msgs.msg import CartesianCoordinates
 from seds.srv import DSSrv
 from seds.srv import DSLoaded
@@ -40,7 +39,7 @@ class WAMDriver:
         self.feedback = feedback
         self.rate = rate
 
-        self.pub = rospy.Publisher('/wam/cartesian_command', CartesianTargets)
+        self.pub = rospy.Publisher('/wam/cartesian_command', CartesianCoordinates)
 
         # wait for the ds server
         rospy.loginfo('Waiting for ds_node...')
@@ -62,7 +61,7 @@ class WAMDriver:
         self.zerot = rostime.Time(0)
 
 
-        self.cmd = CartesianTargets()
+        self.cmd = CartesianCoordinates()
         self.current_pose = CartesianCoordinates()
 
         self.running = False
@@ -188,7 +187,8 @@ class WAMDriver:
                     else: # just set the endpoint and let JTTeleop take us there
                         self.newx = self.endpoint
 
-                    self.cmd.pos = self.newx
+                    self.cmd.position = self.newx
+                    self.cmd.euler = self.rot
 
                     self.pub.publish(self.cmd)
                     self.rate.sleep()

@@ -11,11 +11,12 @@ roslib.load_manifest('tf')
 import tf
 import rospy
 import rospy.rostime as rostime
+import sys
 
 if __name__ == '__main__':
 
-    source_frameid = 'torso_lift_link'
-    target_frameid = 'r_gripper_tool_frame'
+    source_frameid = sys.argv[1]
+    target_frameid = sys.argv[2]
 
     rospy.init_node('cat_tf')
     listener = tf.TransformListener()
@@ -32,4 +33,4 @@ if __name__ == '__main__':
     et = listener.lookupTransform(source_frameid, target_frameid, rostime.Time(0))
     t = listener.getLatestCommonTime(source_frameid, target_frameid)
 
-    print "[%s, %s, %s, %s, %s, %s, %s]" % (et[0][0],et[0][1],et[0][2],et[1][0],et[1][1],et[1][2],et[1][3])
+    print t, et

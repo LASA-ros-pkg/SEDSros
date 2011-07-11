@@ -1,5 +1,48 @@
 #include "seds_wrapper.hpp"
 
+void populate_model_msg(SEDS *seds_obj, string source_fid, string target_fid, seds::ModelParameters &model){
+  int d;
+
+  if (!seds_obj){
+    ROS_INFO("seds_obj is not set!");
+    return;
+  }
+
+  model.dim = seds_obj->d;
+  model.ncomp = seds_obj->K;
+  model.dT = seds_obj->dT;
+  d = model.dim * 2;
+
+  model.offset.resize(d);
+  for (int i = 0; i < d; i++){
+    model.offset[i] = seds_obj->Offset(i);
+  }
+
+  model.priors.resize(model.ncomp);
+  for (int k = 0; k < model.ncomp; k++){
+    model.priors[k] = seds_obj->Priors(k);
+  }
+
+  model.mus.resize(d * model.ncomp);
+  for(int k = 0; k < model.ncomp; k++){
+    for (int i = 0; i < d; i++){
+      model.mus[ k * d + i ] = seds_obj->Mu(i,k);
+    }
+  }
+
+  model.sigmas.resize(d * d * model.ncomp);
+  for(int k = 0; k < model.ncomp; k++){
+    for (int i = 0; i < d; i++){
+      for (int j = 0; j < d; j++){
+	model.sigmas[k * d * d + i * d + j] = seds_obj->Sigma[k](i,j);
+      }
+    }
+  }
+
+  model.source_fid = source_fid;
+  model.target_fid = target_fid;
+}
+
 void seds_optimize(SEDS *seds, vector< vector< fvec > > trajectories, float dT){
   vector<fvec> samples;
   fvec endpoint = fvec();
@@ -86,13 +129,36 @@ void seds_optimize(SEDS *seds, vector< vector< fvec > > trajectories, float dT){
   delete gmm;
 }
 
-void process_bagfile(string filename, vector< vector<fvec> > &trajectories, float &dT){
+void process_bagfile(string filename, vector< vector<fvec> > &trajectories, float &dT, string &source_fid, string &target_fid){
 
     // initialize the bag view
     rosbag::Bag bag;
     bag.open(filename, rosbag::bagmode::Read);
     ROS_INFO("Processing bag: %s", filename.c_str());
     rosbag::View view(bag, rosbag::TopicQuery("seds/trajectories"));
+
+    // process source and target fids
+    source_fid = "";
+    target_fid = "";
+    vector<string> topics;
+    topics.push_back("seds/source_fid");
+    topics.push_back("seds/target_fid");
+    rosbag::View tf_frame_info(bag, rosbag::TopicQuery(topics));
+
+    BOOST_FOREACH(rosbag::MessageInstance const m, tf_frame_info){
+      std_msgs::String::ConstPtr s = m.instantiate<std_msgs::String>();
+
+      ROS_INFO("TOPIC %s", m.getTopic().c_str());
+      if (m.getTopic().compare("seds/source_fid") == 0){
+	source_fid = s->data;
+      } else if (m.getTopic().compare("seds/target_fid") == 0){
+	target_fid = s->data;
+      }
+
+    }
+
+    ROS_INFO("source_fid: %s", source_fid.c_str());
+    ROS_INFO("target_fid: %s", target_fid.c_str());
 
     // compute some statistics of the sample trajectories
     uint32_t maxindx = 0;

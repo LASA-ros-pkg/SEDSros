@@ -2,24 +2,37 @@ Seds Notes
 J. Stober
 Last updated: 7.6.2011
 
-== Running Seds ==
+== Running Seds (PR2) ==
 
-The main "walk-through" script is in scripts/master.sh. This script
+The main "walk-through" script is in pr2/master_pr2.sh. This script
 prompts the user to record example trajectories, performs optimization
 using SEDS, then drives the robot using pr2_driver.py and the learned
 parameters. For running everything manually (without prompts) see below.
+
+== Running Seds (WAM) ==
+
+There is now a wam/master_wam.sh script for running SEDS using the WAM
+robot. While both seds_node and ds_node are written to be generic
+(preforming operations on SedsMessages and SedsModels) the wam2seds.py
+and wam_driver.py scripts needed robot specific customization (compare
+with tf2seds.py and pr2_driver.py).
+
+tf2seds.py does not work with the current WAMros node since that node
+does not publish to /tf. In other respects, this part of the toolchain
+is fairly generic as well. The robot driver requires some
+customization of the control topic and is otherwise the same.
 
 === Short Version (Manual) ===
 
 1. Collect some sample bagfiles of tf data in a directory.
 
-2. In the scripts directory run:
+2. In the pr2 directory run:
 
    ./train.sh <location of directory containing bagfiles>
 
    (e.g. ./train.sh ../data/bags/pr2/20110615/ )
 
-3. In the scripts directory run: *WILL MOVE THE ROBOT*
+3. In the pr2 directory run: *WILL MOVE THE ROBOT*
 
    ./drive.sh
 
@@ -141,7 +154,7 @@ project:
    If the model is correct, this loop should drive the robot in much
    the same way as the example trajectories.
 
-   The script scripts/init.sh sets up both ds_node and pr2_driver.py
+   The script pr2/init.sh sets up both ds_node and pr2_driver.py
    but you can start pr2_driver.py manually:
 
    rosrun seds pr2_driver.py
@@ -181,7 +194,7 @@ To get this to work in simulation usually requires running the back at a slower 
 
 2. pr2/publish_rcart.py -- Takes Cartesian coordinates on the command line and publishes them continually to r_cart/command_position. Useful for moving the simulated robot to a set pose.
 
-3. scripts/run_test.sh -- Continually calls /ds_node/ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running pr2_driver.py but without the robot.
+3. nodes/run_test.sh -- Continually calls /ds_node/ds_server from various starting points and records the resulting trajectories in a bag file that you can analyze using rxbag. This is like running the system but without the robot.
 
    Ex. ./run_test.sh ../data/bags/pr2/seds/seds_model.bag
 

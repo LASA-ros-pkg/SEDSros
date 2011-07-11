@@ -5,3 +5,5 @@ float64[] offset
 float64[] priors
 float64[] mus
 float64[] sigmas
+string source_fid
+string target_fid

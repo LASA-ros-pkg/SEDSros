@@ -7,6 +7,8 @@
 #include "seds_wrapper.hpp"
 
 SEDS *seds_obj = NULL;
+string source_fid;
+string target_fid;
 
 bool saveFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
 {
@@ -16,50 +18,22 @@ bool saveFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
     return false;
   }
 
-  seds_obj->saveModel(req.filename.c_str());
+  rosbag::Bag bag;
+  seds::ModelParameters model;
+  populate_model_msg(seds_obj, source_fid, target_fid, model);
 
+
+  bag.open(req.filename.c_str(), rosbag::bagmode::Write);
+  bag.write("seds/params", ros::Time::now(), model);
+
+  bag.close();
   return true;
 }
 
 bool getParamsSRV(seds::SedsModel::Request &req, seds::SedsModel::Response &res)
 {
-  int d;
-
-  if (!seds_obj){
-    ROS_INFO("You need to run seds_optimize to generate new model parameters!");
-    return false;
-  }
-
-  res.model.dim = seds_obj->d;
-  res.model.ncomp = seds_obj->K;
-  res.model.dT = seds_obj->dT;
-  d = res.model.dim * 2;
-
-  res.model.offset.resize(d);
-  for (int i = 0; i < d; i++){
-    res.model.offset[i] = seds_obj->Offset(i);
-  }
-
-  res.model.priors.resize(res.model.ncomp);
-  for (int k = 0; k < res.model.ncomp; k++){
-    res.model.priors[k] = seds_obj->Priors(k);
-  }
-
-  res.model.mus.resize(d * res.model.ncomp);
-  for(int k = 0; k < res.model.ncomp; k++){
-    for (int i = 0; i < d; i++){
-      res.model.mus[ k * d + i ] = seds_obj->Mu(i,k);
-    }
-  }
-
-  res.model.sigmas.resize(d * d * res.model.ncomp);
-  for(int k = 0; k < res.model.ncomp; k++){
-    for (int i = 0; i < d; i++){
-      for (int j = 0; j < d; j++){
-	res.model.sigmas[k * d * d + i * d + j] = seds_obj->Sigma[k](i,j);
-      }
-    }
-  }
+  // helper function in seds_wrapper
+  populate_model_msg(seds_obj, source_fid, target_fid, res.model);
 
   return true;
 }
@@ -71,13 +45,14 @@ bool sedsSRV(seds::SedsOptimize::Request  &req, seds::SedsOptimize::Response &re
   ivec labels;
   string filename = req.filename;
 
+  // need to know what transforms were used to generate the pose data
   if (seds_obj){
     delete seds_obj;
   }
   seds_obj = new SEDS();
 
   // process the input file into trajectories for training
-  process_bagfile(filename, trajectories, dT);
+  process_bagfile(filename, trajectories, dT, source_fid, target_fid);
 
   // set up and perform seds optimization
   seds_optimize(seds_obj, trajectories, dT);
@@ -93,7 +68,7 @@ int main(int argc, char **argv)
 
   ros::ServiceServer service = n.advertiseService("/seds/optimize", sedsSRV);
   ros::ServiceServer modelparams = n.advertiseService("/seds/params", getParamsSRV);
-  ros::ServiceServer savefile = n.advertiseService("/seds/savefile", saveFileSRV);
+  ros::ServiceServer savefile = n.advertiseService("/seds/save_file", saveFileSRV);
 
   ROS_INFO("Ready to optimize.");
   ros::spin();

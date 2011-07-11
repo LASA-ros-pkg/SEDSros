@@ -1,10 +1,10 @@
 #include "std_srvs/Empty.h"
 #include "fgmm/fgmm++.hpp"
 #include "seds_wrapper.hpp"
-#include "SEDS.h"
 #include "ros/ros.h"
 #include "seds/DSSrv.h"
 #include "seds/SedsModel.h"
+#include "seds/ModelParameters.h"
 #include "seds/FileIO.h"
 #include "seds/DSLoaded.h"
 #include "std_srvs/Empty.h"
@@ -12,63 +12,74 @@
 Gmm *gmm = NULL;
 fvec endpoint;
 float dT;
+string source_fid;
+string target_fid;
 
 bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
 {
-  SEDS *seds = new SEDS();
 
-  ROS_INFO("Loading model: %s", req.filename.c_str());
+  rosbag::Bag bag;
+  bag.open(req.filename.c_str(), rosbag::bagmode::Read);
+  rosbag::View view(bag, rosbag::TopicQuery("seds/params"));
 
-  // check for file existance
-  struct stat stFileInfo;
-  int intStat = stat(req.filename.c_str(),&stFileInfo);
-  if (intStat != 0){
-    ROS_INFO("File does not exist!");
-    return false;
-  }
+  BOOST_FOREACH(rosbag::MessageInstance const m, view){
+    seds::ModelParameters::ConstPtr model = m.instantiate<seds::ModelParameters>();
 
-  seds->loadModel(req.filename.c_str());
-  int dim = seds->d * 2;
-  int nbClusters = seds->K;
-  dT = seds->dT;
+    // Only one model parameters message will be processed. If you
+    // want to filter by some model field (like a new name field?)
+    // here is where to do that.
 
-  endpoint.resize(dim);
-  for(int i = 0; i < dim; i++){
-    endpoint[i] = seds->Offset(i);
-  }
+    // now extract the parameters for the gmm!
+    int dim = model->dim * 2;
+    int nbClusters = model->ncomp;
+    dT = model->dT;
 
-  ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
-  ROS_INFO("Using dT: %f", dT);
-
-  if (gmm != NULL)
-    delete gmm;
-
-  gmm = new Gmm(nbClusters,dim);
-
-  // and we copy the values back to the source
-  float *mu = new float[dim];
-  float *sigma = new float[dim*dim];
-
-  for(int i = 0; i < nbClusters; i++){
-    for (int d1 = 0; d1 < dim; d1++){
-      mu[d1] = seds->Mu(d1, i);
-      for (int d2 = 0; d2 < dim; d2++){
-	sigma[d2*dim + d1] = seds->Sigma[i](d1, d2);
-      }
+    endpoint.resize(dim);
+    for(int i = 0; i < dim; i++){
+      endpoint[i] = model->offset[i];
     }
-    fgmm_set_prior(gmm->c_gmm, i, seds->Priors(i));
-    fgmm_set_mean(gmm->c_gmm, i, mu);
-    fgmm_set_covar(gmm->c_gmm, i, sigma);
+
+    ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
+    ROS_INFO("Using dT: %f", dT);
+
+    if (gmm != NULL)
+      delete gmm;
+
+    gmm = new Gmm(nbClusters,dim);
+
+    // and we copy the values back to the source
+    float *mu = new float[dim];
+    float *sigma = new float[dim*dim];
+
+    for(int k = 0; k < nbClusters; k++){
+      for (int i = 0; i < dim; i++){
+	mu[i] = model->mus[k * dim + i];
+	for (int j = 0; j < dim; j++){
+	  sigma[i * dim + j] = model->sigmas[k * dim * dim + i * dim + j];
+	}
+      }
+      fgmm_set_prior(gmm->c_gmm, k, model->priors[k]);
+      fgmm_set_mean(gmm->c_gmm, k, mu);
+      fgmm_set_covar(gmm->c_gmm, k, sigma);
+    }
+
+    delete [] sigma;
+    delete [] mu;
+
+    source_fid = model->source_fid;
+    target_fid = model->target_fid;
+    gmm->initRegression(dim/2);
+
+    return true;
+
+
   }
 
-  delete [] sigma;
-  delete [] mu;
-  delete seds;
-
-  gmm->initRegression(dim/2);
-
-  return true;
+  // should not get here...
+  return false;
 }
+
+
 
 bool getParamsSRV(seds::SedsModel::Request &req, seds::SedsModel::Response &res)
 {
@@ -109,6 +120,9 @@ bool getParamsSRV(seds::SedsModel::Request &req, seds::SedsModel::Response &res)
       }
     }
   }
+
+  res.model.source_fid = source_fid;
+  res.model.target_fid = target_fid;
 
   return true;
 }
@@ -163,6 +177,8 @@ bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
   delete [] sigma;
   delete [] mu;
 
+  source_fid = srv.response.model.source_fid;
+  target_fid = srv.response.model.target_fid;
   gmm->initRegression(dim/2);
 
   return true;

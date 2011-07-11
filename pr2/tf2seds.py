@@ -18,6 +18,7 @@ npa = numpy.array
 
 from tf import TransformerROS, LookupException
 from seds.msg import SedsMessage
+from std_msgs.msg import String
 
 import rospy.rostime as rostime
 import rosbag
@@ -48,6 +49,17 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
     pm = SedsMessage() # store previous message for dx computation
     cm = SedsMessage() # current seds message
     zero = rostime.Duration(0)
+
+
+    s1 = String()
+    s1.data = source_fid
+    outbag.write('seds/source_fid', s1)
+    rospy.loginfo("Writing seds/source_fid " + s1.data)
+
+    s2 = String()
+    s2.data = target_fid
+    outbag.write('seds/target_fid', s2)
+    rospy.loginfo("Writing seds/target_fid " + s2.data)
 
     # open all the trajectory bags
     for (i,bagname) in enumerate(inbags):

@@ -12,4 +12,3 @@ time t
 
 # trajectory number
 uint32	  index
-

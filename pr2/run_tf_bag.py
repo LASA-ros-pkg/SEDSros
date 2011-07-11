@@ -17,6 +17,8 @@ from tf.msg import tfMessage
 from geometry_msgs.msg import PoseStamped
 import rospy.rostime as rostime
 
+# TODO : change this to just run on the bagfile directly, instead of having to publish the bag to /tf_old.
+
 """
 Supposedly, tf_prefix is supposed to allow for the kind of tf
 manipulations we would need to replay a bag file of tf information

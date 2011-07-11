@@ -1,5 +1,5 @@
 <launch>
-	<!-- launches seds and ds nodes -->
 	<node name="seds_node" pkg="seds" type="seds_node" />
 	<node name="ds_node" pkg="seds" type="ds_node" />
+	<node name="wam_driver" pkg="seds" type="wam_driver.py" />
 </launch>

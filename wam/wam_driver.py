@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 Author: Jeremy M. Stober
-Program: PR2_DRIVER.PY
+Program: WAM_DRIVER.PY
 Date: Monday, June 20 2011
 Description: Publishes ds commands to /wam/cartesian_command.
 """

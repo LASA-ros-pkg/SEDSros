@@ -198,6 +198,12 @@ To get this to work in simulation usually requires running the back at a slower 
 
    Ex. ./run_test.sh ../data/bags/pr2/seds/seds_model.bag
 
+== TODO ==
+
+* Smooth dx values.
+* Incorporate new SEDS optimization method.
+* Friction trap prevention.
+
 == References ==
 
 === PR2 Remote Lab URLs ===
@@ -219,3 +225,4 @@ Next 2*d Lines:	Sigma(:,:,K)
 
 Note: Everything in the GMM is scaled by a factor of 1000x. This scale
 factor holdover from mldemos code.
+

@@ -5,6 +5,7 @@
 	#include <fstream>
 	#include <float.h>
 	#include "MathLib/MathLib.h"
+        #include "ros/ros.h"
 	using namespace MathLib;
 
 	class SEDS {

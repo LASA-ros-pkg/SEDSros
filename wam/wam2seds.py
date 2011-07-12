@@ -21,7 +21,7 @@ npa = np.array
 
 def iszero(arr):
     for e in arr:
-        if math.fabs(e) > 1e-10:
+        if math.fabs(e) > 1e-4:
             return False
     return True
 

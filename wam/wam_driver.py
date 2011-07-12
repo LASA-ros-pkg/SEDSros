@@ -37,7 +37,8 @@ class WAMDriver:
         self.useseds = True
         self.vm = vm
         self.feedback = feedback
-        self.rate = rate
+        self.rateInt = rate
+        self.rate = rospy.Rate(rate)
 
         self.pub = rospy.Publisher('/wam/cartesian_command', CartesianCoordinates)
 
@@ -54,9 +55,11 @@ class WAMDriver:
         self.stopSRV = rospy.Service('/wam_driver/stop', Empty, self.stop)
         self.quitSRV = rospy.Service('/wam_driver/quit', Empty, self.quit)
         self.vmSRV = rospy.Service('/wam_driver/setvm', FloatSrv, self.setvm)
+        self.cmptvmSRV = rospy.Service('/wam_driver/computevm', Empty, self.computevm)
         self.rateSRV = rospy.Service('/wam_driver/setrate', IntSrv, self.setrate)
         self.fbSRV = rospy.Service('/wam_driver/toggle_feedback', Empty, self.toggleFb)
         self.toggleSRV = rospy.Service('/wam_driver/toggle_seds', Empty, self.toggleSeds)
+        self.stepSRV = rospy.Service('/wam_driver/step', Empty, self.step)
 
         self.zerot = rostime.Time(0)
 
@@ -91,6 +94,7 @@ class WAMDriver:
 
     def setrate(self, req):
         self.runningCV.acquire()
+        self.rateInt = req.value
         self.rate = rospy.Rate(req.value)
         self.runningCV.release()
         rospy.loginfo("Rate set to %d" % req.value)
@@ -126,6 +130,22 @@ class WAMDriver:
         self.runningCV.release()
         return []
 
+    def computevm(self, ignore):
+        res = self.dl()
+        if res.loaded:
+            model = self.dsparams()
+            self.dT = model.model.dT
+            rospy.loginfo("dT is %f" % self.dT)
+            rospy.loginfo("Current rate is %d" % self.rateInt)
+
+            cntl_dt = 1.0 / float(self.rateInt)
+            newdt = cntl_dt / self.dT
+
+            rospy.loginfo("Velocity multiplier should be %f" % newdt)
+            rospy.loginfo("Current vm is %f" % self.vm)
+        return []
+
+
     def start(self, ignore):
         """
         Call the start service to start the wam_driver.
@@ -155,6 +175,25 @@ class WAMDriver:
         self.runningCV.notify()
         self.runningCV.release()
         return []
+
+    def step(self, ignore):
+        rospy.loginfo("Stepping!")
+        self.runningCV.acquire()
+
+        # if feedback is true then re-intialize x on every loop using tf
+        self.rot = list(self.current_pose.euler)
+        self.x = list(self.current_pose.position)
+        rospy.logdebug("x: %s" % str(self.x))
+        self.dx = list(self.ds(self.x).dx)
+        rospy.logdebug("dx: %s" % str(self.dx))
+        self.newx = list(npa(self.x) + self.vm * npa(self.dx))
+        rospy.logdebug("nx: %s" % str(self.newx))
+        self.cmd.position = self.newx
+        self.cmd.euler = self.rot
+        self.pub.publish(self.cmd)
+
+        self.runningCV.release()
+
 
     def spin(self):
 
@@ -221,7 +260,7 @@ def main():
         elif o in ('-f','--feedback'):
             feedback = True
 
-    driver = WAMDriver(vm, feedback, rospy.Rate(100)) # start node
+    driver = WAMDriver(vm, feedback, 500) # start node
     driver.spin()
 
 if __name__ == '__main__':

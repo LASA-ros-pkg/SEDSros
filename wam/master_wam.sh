@@ -51,6 +51,9 @@ function run_demo {
             # load model parameters into ds_node
 	    rosservice call /ds_node/load_model
 
+	    # in case you need to restart
+	    rosservice call /seds/save_model /tmp/model.bag
+
 	    echo "Model is learned and loaded."
 	  break
 	elif [ "$opt" = "Run" ]; then

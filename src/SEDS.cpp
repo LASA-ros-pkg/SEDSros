@@ -165,15 +165,13 @@ bool SEDS::Optimize(){
 	str[1] = (char*)"Likelihood";
 	if (Options.display)
 	{
-		std::cout << std::endl << std::endl;
-		std::cout << "%-------------------------------------------------------------------------------------%" << std::endl;
-		std::cout << "%          Stable Estimator of Dynamical Systems (SEDS) Optimization Solver           %" << std::endl;
-		std::cout << "%       Copyright(c) 2010 S. Mohammad Khansari Zadeh, LASA Lab, EPFL, Lausanne        %" << std::endl;
-		std::cout << "%                    Switzerland, http://lasa.epfl.ch/khansari                        %" << std::endl;
-		std::cout << "%-------------------------------------------------------------------------------------%" << std::endl;
-		std::cout << "\n\nOptimization Algorithm starts ..." << endl;
-		printf("Using %s as the objective function ...\n\n",str[Options.objective]);
-
+	  ROS_INFO("-------------------------------------------------------------------------------------");
+	  ROS_INFO("          Stable Estimator of Dynamical Systems (SEDS) Optimization Solver           ");
+	  ROS_INFO("       Copyright(c) 2010 S. Mohammad Khansari Zadeh, LASA Lab, EPFL, Lausanne        ");
+	  ROS_INFO("                    Switzerland, http://lasa.epfl.ch/khansari                        ");
+	  ROS_INFO("-------------------------------------------------------------------------------------");
+	  ROS_INFO("\n\nOptimization Algorithm starts ...");
+	  ROS_INFO("Using %s as the objective function ...\n\n",str[Options.objective]);
 	}
 
 	double c1=0.0001;
@@ -211,17 +209,17 @@ bool SEDS::Optimize(){
 			}
 		}
 		else{
-			printf("c1 and c2 conditons not satisfied\n");
+			ROS_INFO("c1 and c2 conditons not satisfied\n");
 			break;
 		}
 
 		if (Options.display){
 			if (i%20 == 0){
-				printf("\n                                                    1st Optimality    2nd Optimality\n");
-				printf("   Iteration      J           |dJ|       step-size     Condition         Condition\n");
-				printf("---------------------------------------------------------------------------------------\n");
+				ROS_INFO("                                                    1st Optimality    2nd Optimality");
+				ROS_INFO("   Iteration      J           |dJ|       step-size     Condition         Condition");
+				ROS_INFO("---------------------------------------------------------------------------------------");
 			}
-			printf("      %-3i     %-10.3f    %-10.3f     %-4.3f          %-4s              %-4s\n",i+1,J,dJ.Norm(),alpha,str[c1_cond < 0],str[c2_cond > 0]);
+			ROS_INFO("      %-3i     %-10.3f    %-10.3f     %-4.3f          %-4s              %-4s",i+1,J,dJ.Norm(),alpha,str[c1_cond < 0],str[c2_cond > 0]);
 		}
 
 		Compute_Hess(B,dJ_new-dJ,dp*alpha); //update the hessian (result in B)
@@ -719,24 +717,22 @@ bool SEDS::CheckConstraints(Matrix * A){
 		for(int i=0; i<eigvals.Size(); i++){
 			if(eigvals(i) > 0){
 				if (ver)
-				{
-					cout << endl;
-					cout<<"Optimization did not reach to an optimal point."<<endl;
-					cout<<"Some constraints were slightly violated."<<endl;
-					cout<<"The error may be due to change of hard constraints to soft constrints."<<endl;
-					cout<<"To handle this error, increase the value of 'cons_penalty'"<<endl;
-					cout<<"and re-run the optimization."<<endl<<endl;
-					cout<<"Output error for debugging purpose:"<<endl;
-				}
-				cout<< "k = " << k << "  ;  err = " << eigvals(i) << endl;
+				  {
+				    ROS_INFO("Optimization did not reach to an optimal point.");
+				    ROS_INFO("Some constraints were slightly violated.");
+				    ROS_INFO("The error may be due to change of hard constraints to soft constrints.");
+				    ROS_INFO("To handle this error, increase the value of 'cons_penalty'");
+				    ROS_INFO("and re-run the optimization.");
+				    ROS_INFO("Output error for debugging purpose:");
+				  }
+				ROS_INFO( "k = %d err = %f", k, eigvals(i));
 				ver=false;
 			}
 		}
 	}
 
 	if(ver)
-		cout<<"Optimization finished succesfully!"<<endl;
-	cout << endl;
+	  ROS_INFO("Optimization finished succesfully!");
 
 	return true;
 }

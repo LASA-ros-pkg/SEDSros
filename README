@@ -1,6 +1,6 @@
 Seds Notes
 J. Stober
-Last updated: 7.11.2011
+Last updated: 7.13.2011
 
 == Running Seds (PR2) ==
 
@@ -101,13 +101,19 @@ project:
    Example usage:
    rosrun seds tf2seds.py -b <path_to_tf_bag_files> -o <path_to_seds_bagfile>
 
+   Note that now you can set the source and target frames to something
+   else. This will be recorded in the resulting bagfile as
+   seds/source_fid and seds/target_fid messages. The seds optimization
+   process will read these frame_ids and record them as part of the
+   model parameters.
+
 2. Running SEDS to learn model parameters.
 
    Running SEDS is as easy as "rosrun seds seds_node". This starts the
    seds_node which makes available a single service "seds/optimize"
    which takes arguments of the following form:
 
-   rosservice call seds/optimize"seds.bag"
+   rosservice call seds/optimize seds.bag
 
    The first argument is the location of a SedsMessage bag. The second
    argument tells /seds/optimize the kind of input (SedsMessage). The
@@ -143,7 +149,7 @@ project:
 
    rosservice call /ds_node/ds_server "[0.1, 0.1, 0.1]"
 
-   - pr2_driver.py
+   - pr2/pr2_driver.py
 
    pr2_driver.py is the script that actually drives the robot. The
    mainloop does three things: 1. Reads the current coordinates using a
@@ -154,8 +160,10 @@ project:
    If the model is correct, this loop should drive the robot in much
    the same way as the example trajectories.
 
-   The script pr2/init.sh sets up both ds_node and pr2_driver.py
-   but you can start pr2_driver.py manually:
+   You can run this manually or use a launch script. The pr2_driver.py
+   will correctly transform source frames if seds uses a different
+   source frame. Note that the target frame for seds_node and
+   pr2_driver.py must be the same.
 
    rosrun seds pr2_driver.py
 
@@ -166,22 +174,15 @@ project:
 
 Velocity Problem:
 
-So, with run_test, it looks like the system does exactly the right
-thing, which is great.  Unfortunately, this doesn't seem to carry over
-to the real robot (and to a lesser extent, in simulation).  I think I
-know what the problem is.  At some position x, the computed delta dx
-isn't different enough to cause the cartesian controller to actually
-move the arm.  So the arm stays where it is, and nothing changes.  I've
-some theories:
+SEDS produces velocities that may be too small to overcome the static
+friction of the robot resulting in the robot getting stuck. The
+current solutions are to run an open loop control (and not get any
+feedback about the current pose) or to add a velocity multiplier to
+the SEDS output that will overcome any static friction contraints (at
+least far away from the goal). Another approach that adaptively
+switches between open-closed loop control is still experimental. For
+details see wam/wam_driver.py.
 
-1) Friction not being modeled in the controller
-2) Bad controller (maybe we should try the Jinv controller?)
-3) our velocities are too small (making issues 1 and 2 more apparent)
-
-I focused on 3, because I remember Mohammad telling me something about
-how setting dT correctly is very important, even though mathematically
-it shouldn't matter.  So for today, I threw in a multiplier on the
-velocity, and that seemed to make the problem go away.
 
 == Other Tools ==
 
@@ -201,8 +202,10 @@ To get this to work in simulation usually requires running the back at a slower 
 == TODO ==
 
 * Smooth dx values.
-* Incorporate new SEDS optimization method.
+* Incorporate new SEDS optimization code.
 * Friction trap prevention.
+* Create abstract RobotDriver to share code between pr2 and wam drivers.
+* Publish wam positions to tf.
 
 == References ==
 
@@ -210,19 +213,3 @@ To get this to work in simulation usually requires running the back at a slower 
 * http://mjpeg.pr2-remotelab.com:8080/stream?topic=/remote_lab_cam1/image_raw
 * http://pr2-remotelab.com/demo/wviz.html
 * http://pr2-remotelab.com/demo/wviz_vizonly.html
-
-=== Parameter File Format ===
-
-Based on SEDS.cpp:
-
-First Line: 		d
-Second Line: 		K
-Third Line: 		Priors
-Next 2*d Lines:	Mu
-Next 2*d Lines:	Sigma(:,:,1)
-...
-Next 2*d Lines:	Sigma(:,:,K)
-
-Note: Everything in the GMM is scaled by a factor of 1000x. This scale
-factor holdover from mldemos code.
-

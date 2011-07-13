@@ -16,7 +16,7 @@ import numpy
 import getopt
 npa = numpy.array
 
-from tf import TransformerROS, LookupException
+from tf import TransformerROS, LookupException, ConnectivityException
 from seds.msg import SedsMessage
 from std_msgs.msg import String
 
@@ -134,6 +134,11 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # sometimes not enough info is recorded to complete the transform lookup
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
 
+                except ConnectivityException, error:
+                    # sometimes the perceptual information drops out
+                    rospy.loginfo("ConnectivityException %s" % error)
+                    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+
         # end of current bag -- write out last entry with dx = 0
         cm.dx = npa(cm.x) - npa(pm.x)
         outbag.write('seds/trajectories', cm)
@@ -169,8 +174,8 @@ def main():
     rospy.init_node("tf2seds")
 
     # should be in tf2seds namespace
-    source_frameid = rospy.get_param("/r_cart/root_name","torso_lift_link")
-    target_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
+    source_frameid = rospy.get_param("/tf2seds/source_frameid","torso_lift_link")
+    target_frameid = rospy.get_param("/tf2seds/target_frameid","r_gripper_tool_frame")
     path = rospy.get_param("/tf2seds/source_directory", None)
     outfile = rospy.get_param("/tf2seds/outputfile", None)
 

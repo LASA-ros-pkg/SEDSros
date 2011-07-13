@@ -224,7 +224,7 @@ class WAMDriver:
 
         nx = npa(self.newx)
         cp = npa(self.current_pose.position)
-        rospy.loginfo("diff: %f" %  la.norm(nx - cp))
+        rospy.logdebug("diff: %f" %  la.norm(nx - cp))
 
         if self.feedback == "adaptive":
             if la.norm(nx - cp) > self.adaptive_threshold:

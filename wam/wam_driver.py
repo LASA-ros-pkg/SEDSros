@@ -17,11 +17,12 @@ import rospy.rostime as rostime
 from wam_msgs.msg import CartesianCoordinates
 from seds.srv import DSSrv
 from seds.srv import DSLoaded
-from seds.srv import FloatSrv, IntSrv
+from seds.srv import FloatSrv, IntSrv, StringSrv
 from seds.srv import SedsModel
 from std_srvs.srv import Empty
 
 import numpy
+import numpy.linalg as la
 import getopt
 import sys
 npa = numpy.array
@@ -57,15 +58,18 @@ class WAMDriver:
         self.vmSRV = rospy.Service('/wam_driver/setvm', FloatSrv, self.setvm)
         self.cmptvmSRV = rospy.Service('/wam_driver/computevm', Empty, self.computevm)
         self.rateSRV = rospy.Service('/wam_driver/setrate', IntSrv, self.setrate)
-        self.fbSRV = rospy.Service('/wam_driver/toggle_feedback', Empty, self.toggleFb)
+        self.fbSRV = rospy.Service('/wam_driver/change_feedback', StringSrv, self.change_feedback)
         self.toggleSRV = rospy.Service('/wam_driver/toggle_seds', Empty, self.toggleSeds)
-        self.stepSRV = rospy.Service('/wam_driver/step', Empty, self.step)
+        self.stepSRV = rospy.Service('/wam_driver/step', Empty, self.stepsrv)
+        self.thresholdSRV = rospy.Service("/wam_driver/set_threshold", FloatSrv, self.set_threshold)
 
         self.zerot = rostime.Time(0)
 
 
         self.cmd = CartesianCoordinates()
         self.current_pose = CartesianCoordinates()
+
+        self.adaptive_threshold = 0.5 # 50 cm
 
         self.running = False
         self.runningCV = threading.Condition()
@@ -100,9 +104,10 @@ class WAMDriver:
         rospy.loginfo("Rate set to %d" % req.value)
         return []
 
-    def toggleFb(self, ignore):
+    def change_feedback(self, rec):
         self.runningCV.acquire()
-        self.feedback = not self.feedback
+        assert str(rec.value) in ('hard','none','adaptive')
+        self.feedback = str(rec.value)
         self.runningCV.release()
         rospy.loginfo("Toggling feedback to %s" % self.feedback)
         return []
@@ -176,24 +181,71 @@ class WAMDriver:
         self.runningCV.release()
         return []
 
-    def step(self, ignore):
-        rospy.loginfo("Stepping!")
+    def stepsrv(self, ignore):
         self.runningCV.acquire()
+        self.step()
+        self.runningCV.release()
+        return []
 
-        # if feedback is true then re-intialize x on every loop using tf
-        self.rot = list(self.current_pose.euler)
-        self.x = list(self.current_pose.position)
-        rospy.logdebug("x: %s" % str(self.x))
-        self.dx = list(self.ds(self.x).dx)
-        rospy.logdebug("dx: %s" % str(self.dx))
-        self.newx = list(npa(self.x) + self.vm * npa(self.dx))
-        rospy.logdebug("nx: %s" % str(self.newx))
+    def step(self):
+        self.compute_old_pose()
+        self.compute_new_pose()
+
+        rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
+
+        # set command
         self.cmd.position = self.newx
-        self.cmd.euler = self.rot
+        self.cmd.euler = list(self.current_pose.euler)
+
+        # publish
         self.pub.publish(self.cmd)
 
+    def set_threshold(self, req):
+        self.runningCV.acquire()
+        self.adaptive_threshold = req.value
         self.runningCV.release()
+        rospy.loginfo("Threshold set to %f" % self.adaptive_threshold)
+        return []
 
+    def compute_old_pose(self):
+
+        """
+        Seds sometimes produces velocities that are too small to
+        overcome friction, leading to a frozen robot. Open loop
+        control will overcome this friction (as the desired pose will
+        begin to deviate from the actual pose and the command torques
+        will rise). In the case of compliance, we have an adaptive
+        feature that implements open loop locally, but updates using
+        feedback if there is a big change to the robot pose (indicating
+        perturbation by an outside source).
+        """
+
+        # TODO: record diff during no feedback mode
+
+        nx = npa(self.newx)
+        cp = npa(self.current_pose.position)
+        rospy.loginfo("diff: %f" %  la.norm(nx - cp))
+
+        if self.feedback == "adaptive":
+            if la.norm(nx - cp) > self.adaptive_threshold:
+                # something drastic has changed
+                self.x = list(self.current_pose.position)
+            else:
+                self.x = self.newx
+
+        elif self.feedback == "none":
+            self.x = self.newx # old pose is last new pose
+        elif self.feedback == "hard":
+            self.x = list(self.current_pose.position) # old pose is robot's reported pose
+        else:
+            raise ValueError, "Unknown feedback! %s" % self.feedback
+
+    def compute_new_pose(self):
+        if self.useseds:
+            self.dx = list(self.ds(self.x).dx)
+            self.newx = list(npa(self.x) + self.vm * npa(self.dx))
+        else: # just set the endpoint (might cause torque fault on some robots e.g. WAM)
+            self.newx = self.endpoint
 
     def spin(self):
 
@@ -206,33 +258,11 @@ class WAMDriver:
                 self.runningCV.acquire()
                 if self.running:
 
-                    # if feedback is true then re-intialize x on every loop using tf
-                    self.rot = list(self.current_pose.euler)
-
-                    if self.feedback:
-                        self.x = list(self.current_pose.position)
-                    else:
-                        self.x = self.newx
-
-                    rospy.logdebug("x: %s" % str(self.x))
-
-                    if self.useseds:
-                        self.dx = list(self.ds(self.x).dx)
-
-                        rospy.logdebug("dx: %s" % str(self.dx))
-                        self.newx = list(npa(self.x) + self.vm * npa(self.dx))
-
-                        rospy.logdebug("nx: %s" % str(self.newx))
-                    else: # just set the endpoint and let JTTeleop take us there
-                        self.newx = self.endpoint
-
-                    self.cmd.position = self.newx
-                    self.cmd.euler = self.rot
-
-                    self.pub.publish(self.cmd)
+                    self.step()
                     self.rate.sleep()
 
                 else:
+
                     # wait around until a start service call
                     # check for an interrupt every once and awhile
                     self.runningCV.wait(1.0)
@@ -247,18 +277,19 @@ def main():
 
     # rospy gets first crack at sys.argv
     rospy.myargv(argv=sys.argv)
-    (options,args) = getopt.getopt(sys.argv[1:], 'v:f', ['vm=','feedback'])
+    (options,args) = getopt.getopt(sys.argv[1:], 'v:f:', ['vm=','feedback='])
 
     rospy.init_node('wam_driver')
 
     vm = rospy.get_param("/wam_driver/velocity_multiplier", 1.0)
-    feedback = rospy.get_param("/wam_driver/feedback", True)
+    feedback = rospy.get_param("/wam_driver/feedback", 'none')
 
     for o,a in options:
         if o in ('-v','--vm'):
             vm = float(a)
         elif o in ('-f','--feedback'):
-            feedback = True
+            assert a in ('none','hard','adaptive')
+            feedback = a
 
     driver = WAMDriver(vm, feedback, 500) # start node
     driver.spin()

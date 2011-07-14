@@ -1,6 +1,33 @@
 Seds Notes
 J. Stober
-Last updated: 7.13.2011
+Last updated: 7.14.2011
+
+== What's New ==
+
+Wam and PR2 drivers both inherit from a generic driver.py module. See
+driver.py for some more documentation. Both wam and pr2 modules scale
+the velocities given by SEDS to account for the difference in time
+between samples used for the model and the rate of the control
+loop. This is the tscale parameter in each driver.
+
+tscale = dt_control / dt_sample.
+
+[If seds assumes
+
+dT = 1 and x_t + dx_t = x_{t+1}
+
+and dT = 0.5 when controlling the robot
+
+then we want x_t + 0.5 dx_t = x_{t+0.5}
+where 0.5 = dt_control / dt_sample in this example.
+
+In fact we also have a velocity multiplier hack so
+
+x_t + vm * tscale * dx = x_{t+1}]
+
+PR2 driver translates between the model source frame (like an object's
+frame) and the source frame for the controller. See the section on
+Object Frames below.
 
 == Running Seds (PR2) ==
 
@@ -99,7 +126,11 @@ project:
    is not set up as a ros node.
 
    Example usage:
-   rosrun seds tf2seds.py -b <path_to_tf_bag_files> -o <path_to_seds_bagfile>
+   rosrun seds tf2seds.py -b <path_to_tf_bag_files> -o <path_to_seds_bagfile> -s <source_frame_id> -t <target_frame_id>
+
+   NOTE: source_frame_id can be something perceptual like objectXXXX!
+   target_frame_id should be set to whatever is used for JTTeleop
+   (r_gripper_*).
 
    Note that now you can set the source and target frames to something
    else. This will be recorded in the resulting bagfile as
@@ -181,8 +212,36 @@ feedback about the current pose) or to add a velocity multiplier to
 the SEDS output that will overcome any static friction contraints (at
 least far away from the goal). Another approach that adaptively
 switches between open-closed loop control is still experimental. For
-details see wam/wam_driver.py.
+details see lib/driver.py (compute_old_pose).
 
+Object Frames:
+
+To the best of my knowledge, the pose translations required for
+tracking to an object all work, and I suspect that the problem is not
+with the frame translations but with the model velocities and
+frequency of perceptual data. In any event, here are the hotspots
+where frame transformations take place:
+
+pr2/tf2seds.py:82 -- lookupTransform gives the coordinates of target
+in source frame which are provided on the command line. For perceptual
+tasks the source is an object in tf and the target is some gripper
+frame.
+
+pr2/pr2_driver.py:106 -- lookupTransform gives the current position of
+model target in the model source frame (which will be the same as the
+arguments for tf2seds.py).
+
+pr2/pr2_driver.py:133 -- lookupTransform gives the new commanded
+position in the source frame of the JTTeleop controller.
+
+pr2/pr2_driver.py:142 -- lookupTransform get the current rotations and
+just passes them through to the command topic.
+
+One key problem seems to be that the bags that result from recording
+/tf with objects have very few data points. This may mean we need to
+interpolate to create new datapoints or make sure tscale accounts for
+the much larger dT in the object frame transformations, if the speed
+with which object frame tfs are publish cannot be increased.
 
 == Other Tools ==
 
@@ -204,8 +263,8 @@ To get this to work in simulation usually requires running the back at a slower 
 * Smooth dx values.
 * Incorporate new SEDS optimization code.
 * Friction trap prevention.
-* Create abstract RobotDriver to share code between pr2 and wam drivers.
 * Publish wam positions to tf.
+* Fix errors in tracking perceptual objects.
 
 == References ==
 

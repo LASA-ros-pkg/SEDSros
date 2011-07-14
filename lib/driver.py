@@ -3,7 +3,38 @@
 Author: Jeremy M. Stober
 Program: DRIVER.PY
 Date: Thursday, July 14 2011
-Description: A generic driver class so that PR2 and WAM drivers can share code.
+Description: A generic driver class so that PR2 and WAM drivers (and other drivers) can share code.
+
+To subclass this class:
+
+Implement all init_* methods to create the necessary publishers (for
+commands) and subscribers (for position information) and the code that
+initializes all the variables at the beginning of every run loop
+(init_start).
+
+Implement get_current_position which takes the subscribed information
+(in some type) and turns it into a list of floats for sending to
+ds_node (the model).
+
+Implement publish which takes the current computed new position (newx)
+and formats it for publishing on the command topic.
+
+That's it!
+
+Some notes: Both pr2 and wam drivers shared the same basic structure
+which is captured in this parent class. The main loop logic is
+
+1. Read from some position topic.
+
+2. Do some logic to update the current position (self.x) using either
+the read position or the last position command.
+
+3. Send this computed position to seds.
+
+4. Compute a new position command (self.newx) and format it for
+publishing to the command topic.
+
+
 """
 
 import roslib
@@ -168,6 +199,7 @@ class Driver(object):
         Called inside start to make sure everything is properly initialized.
         Override!
         """
+
         self.model = self.dsparams()
         self.endpoint = npa(self.model.model.offset)[:self.model.model.dim/2]
         self.dT = self.model.model.dT
@@ -211,9 +243,9 @@ class Driver(object):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 
     def step(self):
-        self.compute_old_pose()
-        self.compute_new_pose()
-        self.publish()
+        self.compute_old_pose() # incorporate feedback
+        self.compute_new_pose() # using seds
+        self.publish() # publish the command
 
     def set_threshold(self, req):
         self.runningCV.acquire()
@@ -260,7 +292,7 @@ class Driver(object):
     def compute_new_pose(self):
         if self.useseds:
             self.dx = list(self.ds(self.x).dx)
-            # tscale accounts for timing differences
+            # tscale accounts for timing differences, vm is a hack to overcome friction
             self.newx = list(npa(self.x) + self.vm * self.tscale * npa(self.dx))
         else: # just set the endpoint (might cause torque fault on some robots e.g. WAM)
             self.newx = self.endpoint

@@ -42,7 +42,7 @@ class PR2Driver(driver.Driver):
 
     def __init__(self, name, vm, feedback, rate, source_frameid, target_frameid, waittf):
 
-        driver.Driver(name, vm, feedback, rate)
+        driver.Driver.__init__(self,name, vm, feedback, rate)
 
         self.source_frameid = source_frameid
         self.target_frameid = target_frameid
@@ -73,12 +73,16 @@ class PR2Driver(driver.Driver):
 
     def init_start(self):
 
-        model = self.dsparams()
-        rospy.loginfo("Dim %d" % model.model.dim)
-        self.endpoint = npa(model.model.offset)[:model.model.dim/2]
-        self.model_source_frameid = model.model.source_fid
-        self.model_target_frameid = model.model.target_fid
+        self.model = self.dsparams()
+        self.endpoint = npa(self.model.model.offset)[:self.model.model.dim/2]
+        self.dT = self.model.model.dT
+        self.model_source_frameid = self.model.model.source_fid
+        self.model_target_frameid = self.model.model.target_fid
 
+        cntl_dt = 1.0 / float(self.rateInt)
+        self.tscale =  cntl_dt / self.dT
+
+        rospy.loginfo("model dt: %s cntl dt: %s tscale : %s" % (self.dT, cntl_dt, self.tscale))
         rospy.loginfo("Using endpoint %s" % str(self.endpoint))
         rospy.loginfo("Using model sid: %s fid: %s and controller sid: %s fid: %s" % (self.model_source_frameid,
                                                                                       self.model_target_frameid,
@@ -97,8 +101,21 @@ class PR2Driver(driver.Driver):
 
     def get_current_position(self):
         # feedback for input into seds
-        et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
-        return et[0][:]
+        try:
+            et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
+            return et[0][:]
+
+        except LookupException, error:
+            # sometimes not enough info is recorded to complete the transform lookup
+            rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+
+        except ConnectivityException, error:
+            # sometimes the perceptual information drops out
+            rospy.loginfo("ConnectivityException %s" % error)
+            rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+
+        # if we have an exception just return the old pose!
+        return self.newx
 
     def publish(self):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
@@ -111,6 +128,7 @@ class PR2Driver(driver.Driver):
         model_command.point.y = self.newx[1]
         model_command.point.z = self.newx[2]
 
+        # Transfrom the source_frameid from object -> torso_lift_link or some other frame that JTTeleop knows about!
         control_command = self.listener.transformPoint(self.source_frameid, model_command)
 
         rospy.logdebug("model_command %s control_command %s" % (str(model_command), str(control_command)))

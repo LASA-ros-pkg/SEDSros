@@ -15,7 +15,8 @@ rosrun seds seds_node &
 sleep 2
 
 # process tf bags into SedsMessage bag
-rosrun seds tf2seds.py -b $1 -o tmp.bag -s object18691 -t r_gripper_tool_frame
+#rosrun seds tf2seds.py -b $1 -o tmp.bag -s object18691 -t r_gripper_tool_frame
+rosrun seds tf2seds.py -b $1 -o tmp.bag -s base_link -t r_gripper_tool_frame
 
 # process SedsMessage bag using seds_server
 rosservice call /seds/optimize tmp.bag

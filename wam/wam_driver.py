@@ -45,9 +45,8 @@ class WAMDriver(driver.Driver):
     def init_start(self):
 
         self.model = self.dsparams()
-        rospy.loginfo("Dim %d" % self.model.model.dim)
         self.endpoint = npa(self.model.model.offset)[:self.model.model.dim/2]
-        rospy.loginfo("Using endpoint %s" % str(self.endpoint))
+        self.dT = self.model.model.dT
 
         cntl_dt = 1.0 / float(self.rateInt)
         self.tscale = cntl_dt / self.dT

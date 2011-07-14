@@ -210,7 +210,6 @@ class Driver(object):
         self.pub.publish(pt)
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 
-
     def step(self):
         self.compute_old_pose()
         self.compute_new_pose()

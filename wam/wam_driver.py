@@ -61,6 +61,9 @@ class WAMDriver(driver.Driver):
         self.rot = list(self.current_pose.euler)
         self.newx = self.x
 
+    def get_current_position(self):
+        return list(self.current_pose.position)
+
     def publish(self):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 

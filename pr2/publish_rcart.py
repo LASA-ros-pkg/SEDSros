@@ -15,26 +15,26 @@ import json
 
 if __name__ == '__main__':
 
-    x = json.loads(sys.argv[1])
+    #x = json.loads(sys.argv[1])
 
-    print "Moving to new coords: ", str(x)
+    print "Moving to new coords: "#, str(x)
 
     rospy.init_node("publish_rcart")
     pub = rospy.Publisher('r_cart/command_pose', PoseStamped)
     cmd = PoseStamped()
 
     cmd.header.frame_id = "/torso_lift_link"
-    cmd.pose.position.x = x[0]
-    cmd.pose.position.y = x[1]
-    cmd.pose.position.z = x[2]
-    cmd.pose.orientation.x = x[3]
-    cmd.pose.orientation.y = x[4]
-    cmd.pose.orientation.z = x[5]
-    cmd.pose.orientation.w = x[6]
+    cmd.pose.position.x = float(sys.argv[1])
+    cmd.pose.position.y = float(sys.argv[2])
+    cmd.pose.position.z = float(sys.argv[3])
+    cmd.pose.orientation.x = 0
+    cmd.pose.orientation.y = 0
+    cmd.pose.orientation.z = 0
+    cmd.pose.orientation.w = 1
 
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
 
-        rospy.loginfo( "Publishing cmd: %s" % str(cmd))
+        #rospy.loginfo( "Publishing cmd: %s" % str(cmd))
         pub.publish(cmd)
         rate.sleep()

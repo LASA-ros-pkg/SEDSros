@@ -105,14 +105,17 @@ class PR2Driver(driver.Driver):
             et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
             return et[0][:]
 
-        except LookupException, error:
+        #except LookupException, error:
             # sometimes not enough info is recorded to complete the transform lookup
-            rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+        #    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
 
-        except ConnectivityException, error:
+        #except ConnectivityException, error:
             # sometimes the perceptual information drops out
-            rospy.loginfo("ConnectivityException %s" % error)
-            rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+        #    rospy.loginfo("ConnectivityException %s" % error)
+        #    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+
+        except tf.Exception:
+            rospy.logdebug("An exception happend")
 
         # if we have an exception just return the old pose!
         return self.newx

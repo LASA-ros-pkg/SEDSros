@@ -68,6 +68,7 @@ bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
 
     source_fid = model->source_fid;
     target_fid = model->target_fid;
+		ROS_INFO("Using fids s->t: %s -> %s", source_fid.c_str(), target_fid.c_str());
     gmm->initRegression(dim/2);
 
     return true;

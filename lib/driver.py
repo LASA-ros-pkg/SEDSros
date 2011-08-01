@@ -245,6 +245,7 @@ class Driver(object):
     def step(self):
         self.compute_old_pose() # incorporate feedback
         self.compute_new_pose() # using seds
+        #print self.x + self.newx
         self.publish() # publish the command
 
     def set_threshold(self, req):

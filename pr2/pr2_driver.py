@@ -65,7 +65,7 @@ class PR2Driver(driver.Driver):
         tfound = False
         while not tfound:
             try:
-                self.listener.waitForTransform(source_frame=source_frameid, target_frame=target_frameid,time=self.zerot,timeout=rostime.Duration(10))
+                self.listener.waitForTransform(source_frame=sfid, target_frame=tfid,time=self.zerot,timeout=rostime.Duration(10))
                 tfound = True # no exception
             except tf.Exception, error:
                 print error
@@ -94,6 +94,7 @@ class PR2Driver(driver.Driver):
         # model source is typically an object, controller source is something like torso_lift_link
 
         # init some variables (in model frame)
+        self.wait_for_transform(self.model_source_frameid, self.model_target_frameid)
         et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, self.zerot)
         self.x = list(et[0][:])
         self.newx = self.x
@@ -102,22 +103,18 @@ class PR2Driver(driver.Driver):
     def get_current_position(self):
         # feedback for input into seds
         try:
-            et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
-            return et[0][:]
-
-        #except LookupException, error:
-            # sometimes not enough info is recorded to complete the transform lookup
-        #    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
-
-        #except ConnectivityException, error:
-            # sometimes the perceptual information drops out
-        #    rospy.loginfo("ConnectivityException %s" % error)
-        #    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+            t = self.listener.getLatestCommonTime(self.model_source_frameid,self.model_target_frameid)
+            if rospy.Time.now()-t < rospy.Duration.from_sec(1):
+                et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
+                return et[0][:]
+            else:
+                #print "Haven't seen anything for 1 sec, using no feedback"
+                return self.newx
 
         except tf.Exception:
-            rospy.logdebug("An exception happend")
-
-        # if we have an exception just return the old pose!
+            rospy.logdebug("%s tf exception in gcp!" % self.name)
+            
+        # if we have an exception just return the previously computed pose!
         return self.newx
 
     def publish(self):

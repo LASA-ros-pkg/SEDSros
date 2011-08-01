@@ -151,7 +151,7 @@ def main():
 
     # rospy gets first crack at sys.argv
     rospy.myargv(argv=sys.argv)
-    (options,args) = getopt.getopt(sys.argv[1:], 'v:f:s:t:', ['vm=','feedback=','source=','target='])
+    (options,args) = getopt.getopt(sys.argv[1:], 'v:f:s:t:a:', ['vm=','feedback=','source=','target=','athresh='])
 
     rospy.init_node('pr2_driver')
 
@@ -170,8 +170,11 @@ def main():
             source_frameid = a
         elif o in ('-t','--target'):
             target_frameid = a
+        elif o in ('-a','--athresh'):
+            adaptive_threshold = a
 
     driver = PR2Driver("pr2_driver", vm, feedback, 100, source_frameid, target_frameid, False) # start node
+    driver.adaptive_threshold=adaptive_threshold
     driver.spin()
 
 if __name__ == '__main__':

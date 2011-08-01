@@ -95,7 +95,7 @@ class Driver(object):
 
         self.zerot = rostime.Time(0)
 
-        self.adaptive_threshold = 0.5 # 50 cm
+        self.adaptive_threshold = 0.1 # 10 cm
 
         self.running = False
         self.runningCV = threading.Condition()

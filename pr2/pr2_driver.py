@@ -37,7 +37,8 @@ class PR2Driver(driver.Driver):
         self.listener = tf.TransformListener()
 
     def init_publisher(self):
-        self.pub = rospy.Publisher('r_cart/command_pose', PoseStamped)
+        self.rpub = rospy.Publisher('r_cart/command_pose', PoseStamped)
+        self.lpub = rospy.Publisher('l_cart/command_pose', PoseStamped)
 
 
     def __init__(self, name, vm, feedback, rate, thresh, source_frameid, target_frameid, msfid, mtfid, waittf):
@@ -49,6 +50,7 @@ class PR2Driver(driver.Driver):
         self.model_source_frameid = msfid
         self.model_target_frameid = mtfid
         self.adaptive_threshold=thresh
+        self.hand="right"
 
         # wait for the proper /tf transforms
         if waittf:
@@ -59,6 +61,7 @@ class PR2Driver(driver.Driver):
 
         # for changing objects
         self.msfidSRV = rospy.Service("/%s/change_object" % name, StringSrv, self.change_object)
+        self.handSRV = rospy.Service("/%s/change_hand" % name, Empty, self.change_hand)
 
     def change_object(self, rec):
         self.runningCV.acquire()
@@ -67,6 +70,17 @@ class PR2Driver(driver.Driver):
         rospy.loginfo("Changing object to %s" % self.model_source_frameid)
         return []
 
+    def change_hand(self, ignore):
+        self.runningCV.acquire()
+        if self.hand=="right":
+            self.hand="left"
+            self.target_frameid=self.ltfid
+        else:
+            self.hand="right"
+            self.target_frameid=self.rtfid
+        rospy.loginfo("Changing hand to %s" % self.hand) 
+        self.runningCV.release()
+        return []
 
     def wait_for_transform(self,sfid, tfid):
         """
@@ -88,12 +102,12 @@ class PR2Driver(driver.Driver):
         self.model = self.dsparams()
         self.endpoint = npa(self.model.model.offset)[:self.model.model.dim/2]
         self.dT = self.model.model.dT
+        #if these are empty, assume the same as what were trained with
         if self.model_source_frameid=="":
             self.model_source_frameid = self.model.model.source_fid
-        if self.model_target_frameid=="":
-            self.model_target_frameid = self.model.model.target_fid
-
-        #self.model_source_frameid = "object007"
+        #if self.model_target_frameid=="":
+        #    self.model_target_frameid = self.model.model.target_fid
+        self.model_target_frameid=self.target_frameid
 
         cntl_dt = 1.0 / float(self.rateInt)
         self.tscale =  cntl_dt / self.dT
@@ -105,7 +119,7 @@ class PR2Driver(driver.Driver):
                                                                                       self.source_frameid,
                                                                                       self.target_frameid))
         # nothing will work if this is not true!
-        assert self.model_target_frameid == self.target_frameid
+        #assert self.model_target_frameid == self.target_frameid
 
         # model source is typically an object, controller source is something like torso_lift_link
 
@@ -161,8 +175,11 @@ class PR2Driver(driver.Driver):
             self.cmd.pose.orientation.y = self.rot[1]
             self.cmd.pose.orientation.z = self.rot[2]
             self.cmd.pose.orientation.w = self.rot[3]
-            
-            self.pub.publish(self.cmd)
+
+            if self.hand=="right":
+                self.rpub.publish(self.cmd)
+            else:
+                self.lpub.publish(self.cmd)
 
         except tf.Exception:
             rospy.logdebug("%s tf exception in publish!" % self.name)
@@ -175,8 +192,13 @@ def main():
 
     rospy.init_node('pr2_driver')
 
-    source_frameid = rospy.get_param("/r_cart/root_name","torso_lift_link")
-    target_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
+    rsource_frameid = rospy.get_param("/r_cart/root_name","torso_lift_link")
+    rtarget_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
+    lsource_frameid = rospy.get_param("/l_cart/root_name","torso_lift_link")
+    ltarget_frameid = rospy.get_param("/l_cart/tip_name","l_gripper_tool_frame")
+    #both left and right hands must be in the same reference frame
+    assert lsource_frameid == rsource_frameid
+    
     vm = rospy.get_param("/pr2_driver/velocity_multiplier", 10.0)
     feedback = rospy.get_param("/pr2_driver/feedback", 'hard')
     msfid=""
@@ -195,8 +217,10 @@ def main():
         elif o in ('-a','--athresh'):
             adaptive_threshold = float(a)
 
-    driver = PR2Driver("pr2_driver", vm, feedback, 100, adaptive_threshold, source_frameid, target_frameid, msfid, mtfid,False) # start node
+    driver = PR2Driver("pr2_driver", vm, feedback, 100, adaptive_threshold, rsource_frameid, rtarget_frameid, msfid, mtfid,False) # start node
     #driver.adaptive_threshold=adaptive_threshold
+    driver.ltfid=ltarget_frameid
+    driver.rtfid=rtarget_frameid
     driver.spin()
 
 if __name__ == '__main__':

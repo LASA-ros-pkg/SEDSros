@@ -19,7 +19,7 @@ from geometry_msgs.msg import PointStamped
 
 from seds.srv import DSSrv
 from seds.srv import DSLoaded
-from seds.srv import FloatSrv, IntSrv
+from seds.srv import FloatSrv, IntSrv, StringSrv
 from seds.srv import SedsModel
 from std_srvs.srv import Empty
 
@@ -56,6 +56,17 @@ class PR2Driver(driver.Driver):
 
         self.cmd = PoseStamped()
         self.cmd.header.frame_id = "/" + source_frameid
+
+        # for changing objects
+        self.msfidSRV = rospy.Service("/%s/change_object" % name, StringSrv, self.change_object)
+
+    def change_object(self, rec):
+        self.runningCV.acquire()
+        self.model_source_frameid = str(rec.value)
+        self.runningCV.release()
+        rospy.loginfo("Changing object to %s" % self.model_source_frameid)
+        return []
+
 
     def wait_for_transform(self,sfid, tfid):
         """

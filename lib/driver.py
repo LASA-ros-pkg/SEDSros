@@ -186,6 +186,7 @@ class Driver(object):
         rospy.loginfo("dT: %s" % str(self.dT))
         rospy.loginfo("tscale: %s" % str(self.tscale))
         rospy.loginfo("thresh: %s" % str(self.adaptive_threshold))
+        #rospy.loginfo("source: %s" % str(self.model_source_frameid))
         return []
 
     def stepsrv(self, ignore):

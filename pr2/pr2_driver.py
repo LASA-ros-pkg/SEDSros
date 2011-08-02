@@ -40,14 +40,15 @@ class PR2Driver(driver.Driver):
         self.pub = rospy.Publisher('r_cart/command_pose', PoseStamped)
 
 
-    def __init__(self, name, vm, feedback, rate, source_frameid, target_frameid, waittf):
+    def __init__(self, name, vm, feedback, rate, thresh, source_frameid, target_frameid, msfid, mtfid, waittf):
 
         driver.Driver.__init__(self,name, vm, feedback, rate)
 
         self.source_frameid = source_frameid
         self.target_frameid = target_frameid
-        self.model_source_frameid = ""
-        self.model_target_frameid = ""
+        self.model_source_frameid = msfid
+        self.model_target_frameid = mtfid
+        self.adaptive_threshold=thresh
 
         # wait for the proper /tf transforms
         if waittf:
@@ -76,8 +77,12 @@ class PR2Driver(driver.Driver):
         self.model = self.dsparams()
         self.endpoint = npa(self.model.model.offset)[:self.model.model.dim/2]
         self.dT = self.model.model.dT
-        self.model_source_frameid = self.model.model.source_fid
-        self.model_target_frameid = self.model.model.target_fid
+        if self.model_source_frameid=="":
+            self.model_source_frameid = self.model.model.source_fid
+        if self.model_target_frameid=="":
+            self.model_target_frameid = self.model.model.target_fid
+
+        #self.model_source_frameid = "object007"
 
         cntl_dt = 1.0 / float(self.rateInt)
         self.tscale =  cntl_dt / self.dT
@@ -163,6 +168,8 @@ def main():
     target_frameid = rospy.get_param("/r_cart/tip_name","r_gripper_tool_frame")
     vm = rospy.get_param("/pr2_driver/velocity_multiplier", 10.0)
     feedback = rospy.get_param("/pr2_driver/feedback", 'hard')
+    msfid=""
+    mtfid=""
 
     for o,a in options:
         if o in ('-v','--vm'):
@@ -171,14 +178,14 @@ def main():
             assert a in ('none','hard','adaptive')
             feedback = a
         elif o in ('-s','--source'):
-            source_frameid = a
+            msfid = a
         elif o in ('-t','--target'):
-            target_frameid = a
+            mtfid = a
         elif o in ('-a','--athresh'):
             adaptive_threshold = float(a)
 
-    driver = PR2Driver("pr2_driver", vm, feedback, 100, source_frameid, target_frameid, False) # start node
-    driver.adaptive_threshold=adaptive_threshold
+    driver = PR2Driver("pr2_driver", vm, feedback, 100, adaptive_threshold, source_frameid, target_frameid, msfid, mtfid,False) # start node
+    #driver.adaptive_threshold=adaptive_threshold
     driver.spin()
 
 if __name__ == '__main__':

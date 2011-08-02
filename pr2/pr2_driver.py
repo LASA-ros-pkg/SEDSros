@@ -129,23 +129,27 @@ class PR2Driver(driver.Driver):
         model_command.point.z = self.newx[2]
 
         # Transfrom the source_frameid from object -> torso_lift_link or some other frame that JTTeleop knows about!
-        control_command = self.listener.transformPoint(self.source_frameid, model_command)
+        try:
+            control_command = self.listener.transformPoint(self.source_frameid, model_command)
+       
+            rospy.logdebug("model_command %s control_command %s" % (str(model_command), str(control_command)))
 
-        rospy.logdebug("model_command %s control_command %s" % (str(model_command), str(control_command)))
-
-        self.cmd.pose.position.x = control_command.point.x
-        self.cmd.pose.position.y = control_command.point.y
-        self.cmd.pose.position.z = control_command.point.z
+            self.cmd.pose.position.x = control_command.point.x
+            self.cmd.pose.position.y = control_command.point.y
+            self.cmd.pose.position.z = control_command.point.z
 
         # just use the last tf pose orientations
-        ct = self.listener.lookupTransform(self.source_frameid, self.target_frameid,rostime.Time(0))
-        self.rot = list(ct[1][:])
-        self.cmd.pose.orientation.x = self.rot[0]
-        self.cmd.pose.orientation.y = self.rot[1]
-        self.cmd.pose.orientation.z = self.rot[2]
-        self.cmd.pose.orientation.w = self.rot[3]
+            ct = self.listener.lookupTransform(self.source_frameid, self.target_frameid,rostime.Time(0))
+            self.rot = list(ct[1][:])
+            self.cmd.pose.orientation.x = self.rot[0]
+            self.cmd.pose.orientation.y = self.rot[1]
+            self.cmd.pose.orientation.z = self.rot[2]
+            self.cmd.pose.orientation.w = self.rot[3]
+            
+            self.pub.publish(self.cmd)
 
-        self.pub.publish(self.cmd)
+        except tf.Exception:
+            rospy.logdebug("%s tf exception in publish!" % self.name)
 
 def main():
 
@@ -171,7 +175,7 @@ def main():
         elif o in ('-t','--target'):
             target_frameid = a
         elif o in ('-a','--athresh'):
-            adaptive_threshold = a
+            adaptive_threshold = float(a)
 
     driver = PR2Driver("pr2_driver", vm, feedback, 100, source_frameid, target_frameid, False) # start node
     driver.adaptive_threshold=adaptive_threshold

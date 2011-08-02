@@ -277,9 +277,11 @@ class Driver(object):
         rospy.logdebug("diff: %f" %  la.norm(nx - cp))
 
         if self.feedback == "adaptive":
+            #print la.norm(nx-cp) + self.adaptive_threshold
             if la.norm(nx - cp) > self.adaptive_threshold:
                 # something drastic has changed
                 self.x = position
+                #print "Perturbation detected!"
             else:
                 self.x = self.newx
 

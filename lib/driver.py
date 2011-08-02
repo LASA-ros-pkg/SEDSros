@@ -275,6 +275,8 @@ class Driver(object):
         position = self.get_current_position()
         nx = npa(self.newx)
         cp = npa(position)
+        #print nx
+        #print cp
         rospy.logdebug("diff: %f" %  la.norm(nx - cp))
 
         if self.feedback == "adaptive":

@@ -17,6 +17,7 @@ import getopt
 npa = numpy.array
 
 from tf import TransformerROS, LookupException, ConnectivityException
+from tf.transformations import euler_from_quaternion
 from seds.msg import SedsMessage
 from std_msgs.msg import String
 
@@ -84,6 +85,10 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
 
                     # fill in the seds message
                     cm.x = et[0][:] # pos (x,y,z)
+                    quat = et[1][:]
+                    eu = euler_from_quaternion(quat)
+                    cm.x = cm.x + eu
+                    #print cm.x
 
                     cm.index = i
                     cm.t = t

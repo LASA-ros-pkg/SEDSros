@@ -39,7 +39,7 @@ bool loadFileSRV(seds::FileIO::Request &req, seds::FileIO::Response &res)
       endpoint[i] = model->offset[i];
     }
 
-    ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
+    ROS_INFO("Using endpoint %d: %f %f %f", dim/2, endpoint[0], endpoint[1], endpoint[2]);
     ROS_INFO("Using dT: %f", dT);
 
     if (gmm != NULL)
@@ -151,7 +151,7 @@ bool loadSRV(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res)
     endpoint[i] = srv.response.model.offset[i];
   }
 
-  ROS_INFO("Using endpoint: %f %f %f", endpoint[0], endpoint[1], endpoint[2]);
+  ROS_INFO("Using endpoint %d: %f %f %f", dim/2, endpoint[0], endpoint[1], endpoint[2]);
   ROS_INFO("Using dT: %f", dT);
 
   if (gmm != NULL)

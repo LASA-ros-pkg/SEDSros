@@ -23,6 +23,7 @@ from seds.srv import FloatSrv, IntSrv, StringSrv
 from seds.srv import SedsModel
 from std_srvs.srv import Empty
 
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 import numpy
 import getopt
@@ -126,7 +127,7 @@ class PR2Driver(driver.Driver):
         # init some variables (in model frame)
         self.wait_for_transform(self.model_source_frameid, self.model_target_frameid)
         et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, self.zerot)
-        self.x = list(et[0][:])
+        self.x = et[0][:]+euler_from_quaternion(et[1][:])
         self.newx = self.x
 
 
@@ -136,7 +137,10 @@ class PR2Driver(driver.Driver):
             t = self.listener.getLatestCommonTime(self.model_source_frameid,self.model_target_frameid)
             if rospy.Time.now()-t < rospy.Duration.from_sec(1):
                 et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
-                return et[0][:]
+                pos = et[0][:] # pos (x,y,z)
+                quat = et[1][:]
+                eu = euler_from_quaternion(quat)
+                return pos + eu
             else:
                 #print "Haven't seen anything for 1 sec, using no feedback"
                 return self.newx
@@ -151,30 +155,44 @@ class PR2Driver(driver.Driver):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 
         # need to transform the new position newx into self.source_frameid reference
-        model_command = PointStamped()
+        model_command = PoseStamped()
         model_command.header.frame_id = "/" + self.model_source_frameid
 
-        model_command.point.x = self.newx[0]
-        model_command.point.y = self.newx[1]
-        model_command.point.z = self.newx[2]
+        model_command.pose.position.x = self.newx[0]
+        model_command.pose.position.y = self.newx[1]
+        model_command.pose.position.z = self.newx[2]
+        quat=quaternion_from_euler(self.newx[3],self.newx[4],self.newx[5])
+        model_command.pose.orientation.x=quat[0]
+        model_command.pose.orientation.y=quat[1]
+        model_command.pose.orientation.z=quat[2]
+        model_command.pose.orientation.w=quat[3]
 
         # Transfrom the source_frameid from object -> torso_lift_link or some other frame that JTTeleop knows about!
         try:
-            control_command = self.listener.transformPoint(self.source_frameid, model_command)
+            #control_command = self.listener.transformPoint(self.source_frameid, model_command)
+            control_command=self.listener.transformPose(self.source_frameid,model_command)
        
             rospy.logdebug("model_command %s control_command %s" % (str(model_command), str(control_command)))
+            self.cmd.pose.position.x=control_command.pose.position.x
+            self.cmd.pose.position.y=control_command.pose.position.y
+            self.cmd.pose.position.z=control_command.pose.position.z
+            self.cmd.pose.orientation.x=control_command.pose.orientation.x
+            self.cmd.pose.orientation.y=control_command.pose.orientation.y
+            self.cmd.pose.orientation.z=control_command.pose.orientation.z
+            self.cmd.pose.orientation.w=control_command.pose.orientation.w
 
-            self.cmd.pose.position.x = control_command.point.x
-            self.cmd.pose.position.y = control_command.point.y
-            self.cmd.pose.position.z = control_command.point.z
+            #self.cmd.pose.position.x = control_command.point.x
+            #self.cmd.pose.position.y = control_command.point.y
+            #self.cmd.pose.position.z = control_command.point.z
+            
 
         # just use the last tf pose orientations
-            ct = self.listener.lookupTransform(self.source_frameid, self.target_frameid,rostime.Time(0))
-            self.rot = list(ct[1][:])
-            self.cmd.pose.orientation.x = self.rot[0]
-            self.cmd.pose.orientation.y = self.rot[1]
-            self.cmd.pose.orientation.z = self.rot[2]
-            self.cmd.pose.orientation.w = self.rot[3]
+         #   ct = self.listener.lookupTransform(self.source_frameid, self.target_frameid,rostime.Time(0))
+         #   self.rot = list(ct[1][:])
+         #   self.cmd.pose.orientation.x = self.rot[0]
+         #   self.cmd.pose.orientation.y = self.rot[1]
+         #   self.cmd.pose.orientation.z = self.rot[2]
+         #   self.cmd.pose.orientation.w = self.rot[3]
 
             if self.hand=="right":
                 self.rpub.publish(self.cmd)

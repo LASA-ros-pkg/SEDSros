@@ -221,6 +221,7 @@ def main():
     feedback = rospy.get_param("/pr2_driver/feedback", 'hard')
     msfid=""
     mtfid=""
+    adaptive_threshold=0.5
 
     for o,a in options:
         if o in ('-v','--vm'):

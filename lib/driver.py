@@ -39,6 +39,7 @@ publishing to the command topic.
 
 import roslib
 roslib.load_manifest('seds')
+import actionlib
 
 import rospy
 import rospy.rostime as rostime
@@ -49,12 +50,15 @@ from seds.srv import SedsModel
 from geometry_msgs.msg import Point
 from std_srvs.srv import Empty
 
+import seds.msg as action_msg
 
 import numpy
 import numpy.linalg as la
 import getopt
 import sys
 npa = numpy.array
+
+import time
 
 import threading
 
@@ -103,6 +107,21 @@ class Driver(object):
         self.init_publisher() # creates self.pub
         self.init_subscriber() # creates self.sub
 
+    #def startActionServer(self):
+        print "Driver AS starting"
+        self._as = actionlib.SimpleActionServer("/%s/action_server" % name, action_msg.doSEDSAction, execute_cb=self.action_cb, auto_start = False)
+        self._as.start()
+
+    def action_cb(self,ignore):
+        if self.start(self) == True:
+            self.finished_move=False
+            while self.finished_move==False:
+                time.sleep(0.1)
+            self.stop(self)
+            self._as.set_succeeded()
+        else:
+            self._as.set_aborted()
+        
     def init_publisher(self):
         """
         Override this in subclass.
@@ -224,16 +243,20 @@ class Driver(object):
         res = self.dl()
         if res.loaded:
             # init some variables
-            self.init_start()
-
-            self.running = True
-            rospy.loginfo("%s starting!" % self.name)
+            if self.init_start()==True:
+                self.running = True
+                rospy.loginfo("%s starting!" % self.name)
+            else:
+                rospy.loginfo("%s unable to start!" % self.name)
+                self.runningCV.notify()
+                self.runningCV.release()
+                return False
         else:
             rospy.loginfo("ds_node model not loaded -- not starting!")
 
         self.runningCV.notify()
         self.runningCV.release()
-        return []
+        return True
 
     def publish(self):
         pt = Point()
@@ -246,6 +269,10 @@ class Driver(object):
     def step(self):
         self.compute_old_pose() # incorporate feedback
         self.compute_new_pose() # using seds
+        if la.norm(npa(self.newx)-npa(self.endpoint))<self.adaptive_threshold:
+            self.finished_move=True
+        else:
+            self.finished_move=False
         #print self.x + self.newx
         self.publish() # publish the command
 
@@ -348,6 +375,7 @@ def main():
             feedback = a
 
     driver = Driver("test_driver", vm, feedback, 100) # start node
+    #driver.startActionServer()
     driver.spin()
 
 if __name__ == '__main__':

@@ -17,6 +17,8 @@
   <depend package="rospy" />
   <depend package="rosbag" />
   <depend package="tf" />
+  <depend package="actionlib" />
+  <depend package="actionlib_msgs"/>
 
 </package>
 

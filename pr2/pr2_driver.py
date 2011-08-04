@@ -90,13 +90,14 @@ class PR2Driver(driver.Driver):
 
         rospy.loginfo('Waiting for transform...')
         tfound = False
-        while not tfound:
-            try:
-                self.listener.waitForTransform(source_frame=sfid, target_frame=tfid,time=self.zerot,timeout=rostime.Duration(10))
-                tfound = True # no exception
-            except tf.Exception, error:
-                print error
-        rospy.loginfo('Transform found!')
+        #while not tfound:
+        try:
+            self.listener.waitForTransform(source_frame=sfid, target_frame=tfid,time=self.zerot,timeout=rostime.Duration(10))
+            tfound = True # no exception
+            rospy.loginfo('Transform found!')
+        except tf.Exception, error:
+            rospy.logwarn(error)
+        return tfound
 
     def init_start(self):
 
@@ -125,11 +126,13 @@ class PR2Driver(driver.Driver):
         # model source is typically an object, controller source is something like torso_lift_link
 
         # init some variables (in model frame)
-        self.wait_for_transform(self.model_source_frameid, self.model_target_frameid)
+        ret=self.wait_for_transform(self.model_source_frameid, self.model_target_frameid)
+        if ret!=True:
+            return False
         et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, self.zerot)
         self.x = et[0][:]+euler_from_quaternion(et[1][:])
         self.newx = self.x
-
+        return True
 
     def get_current_position(self):
         # feedback for input into seds

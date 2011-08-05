@@ -220,11 +220,11 @@ def main():
     #both left and right hands must be in the same reference frame
     assert lsource_frameid == rsource_frameid
     
-    vm = rospy.get_param("/pr2_driver/velocity_multiplier", 10.0)
-    feedback = rospy.get_param("/pr2_driver/feedback", 'hard')
+    vm = rospy.get_param("/pr2_driver/velocity_multiplier", 1)
+    feedback = rospy.get_param("/pr2_driver/feedback", 'adaptive')
     msfid=""
     mtfid=""
-    adaptive_threshold=0.5
+    adaptive_threshold=0.1
 
     for o,a in options:
         if o in ('-v','--vm'):

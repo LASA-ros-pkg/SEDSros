@@ -39,8 +39,9 @@ class BagListener(TransformerROS):
             self.setTransform(transform, "tf2seds")
 
 def iszero(arr):
+    #return False
     for e in arr:
-        if math.fabs(e) > 1e-10:
+        if math.fabs(e) > 1e-5:
             return False
     return True
 
@@ -71,12 +72,17 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
         bag = rosbag.Bag(bagname)
         first = True # set pm on first step -- compute pm.dx on every other step
 
+        tf_cnt=0
+        tf_match_cnt=0
+        nonzero_cnt=0
+
         # read all the bag messages and process /tf messages
         for topic, msg, t in bag.read_messages():
 
             if topic[-2:] == "tf":
                 # loads the transforms
                 listener.load(msg)
+                tf_cnt+=1
 
                 # computes the coordinates
                 try:
@@ -123,21 +129,24 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # and this criterion is the best in terms of
                     # simplicity and quality.
 
+                    tf_match_cnt+=1
                     if (pm.dt != zero and not iszero(pm.dx)):
                         rospy.logdebug("Message time: %s" % str(pm.t))
                         outbag.write('seds/trajectories', pm)
+                        nonzero_cnt+=1
 
                         # alt. set t parameter to orginal bag
                         # time? would need to process bags in
                         # order to avoid time travel
 
-                    pm.x = cm.x
-                    pm.index = cm.index
-                    pm.t = cm.t
+                        pm.x = cm.x
+                        pm.index = cm.index
+                        pm.t = cm.t
 
                 except LookupException, error:
                     # sometimes not enough info is recorded to complete the transform lookup
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+                    rospy.loginfo("LookupException %s" % error)
 
                 except ConnectivityException, error:
                     # sometimes the perceptual information drops out
@@ -147,7 +156,8 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
         # end of current bag -- write out last entry with dx = 0
         cm.dx = npa(cm.x) - npa(pm.x)
         outbag.write('seds/trajectories', cm)
-
+        #print "Found " + str(tf_cnt) + "tfs, " + str(tf_match_cnt) + " match, and " + str(nonzero_cnt) + " are nonzero."
+        rospy.loginfo("Found %s, %s match and %s are nonzero" % (str(tf_cnt), str(tf_match_cnt), str(nonzero_cnt)))
         bag.close()
 
     rospy.loginfo("Writing bag: %s" % outfilename)

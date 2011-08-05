@@ -18,6 +18,7 @@ npa = numpy.array
 
 from tf import TransformerROS, LookupException, ConnectivityException
 from tf.transformations import euler_from_quaternion
+import tf
 from seds.msg import SedsMessage
 from std_msgs.msg import String
 
@@ -39,7 +40,7 @@ class BagListener(TransformerROS):
             self.setTransform(transform, "tf2seds")
 
 def iszero(arr):
-    return False
+    #return False
     for e in arr:
         if math.fabs(e) > 1e-5:
             return False
@@ -78,57 +79,46 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
 
         # read all the bag messages and process /tf messages
         for topic, msg, t in bag.read_messages():
-            #print msg.transforms[0].header
-            #cfid=msg.transforms[0].child_frame_id
-            #ofid=msg.transforms[0].header.frame_id
-            #print cfid
-            #print ofid
-            print len(msg.transforms)
+
+            #only process /tf messages
             if topic[-2:] == "tf":# and (cfid == target_fid or cfid == source_fid):
                 # loads the transforms
                 listener.load(msg)
                 tf_cnt+=1
-                if target_fid in msg.transforms.child_frame_id:
-                    print "Got it!"
-
-                # computes the coordinates
                 try:
                     #Can we transform between these?
-                    et = listener.lookupTransform(source_fid, target_fid, rostime.Time(0))
-                    #the last time we knew both things
-                    tcommon = listener.getLatestCommonTime(source_fid, target_fid)
-                    #transform from the source at that time to the target at the current time
-                    #assume source is not moving
-                    et = listener.lookupTransformFull(source_fid,tcommon,target_fid,t,source_fid)
-                    # fill in the seds message
-                    cm.x = et[0][:] # pos (x,y,z)
-                    quat = et[1][:]
-                    eu = euler_from_quaternion(quat)
-                    cm.x = cm.x + eu
-                    #print cm.x
-
+                    #et = listener.lookupTransform(source_fid, target_fid, rostime.Time(0))
+                    #since source and target may be at very different rates, we need to time travel
+                    #so get times with respect to a constant (the torso)
+                    unmoving_fid="torso_lift_link"
+                    source_time=listener.getLatestCommonTime(source_fid,unmoving_fid)
+                    target_time=listener.getLatestCommonTime(target_fid,unmoving_fid)
+                    et = listener.lookupTransformFull(source_fid,source_time,target_fid,target_time,unmoving_fid)
+                    tf_match_cnt+=1
+                    # get the current x
+                    cm.x = et[0][:] + euler_from_quaternion(et[1][:])
                     cm.index = i
-                    cm.t = t
+                    cm.t = max(source_time,target_time)
 
                     if first:
                         pm.x = cm.x
                         pm.index = cm.index
                         pm.t = cm.t
                         first = False
-
+                        
                     # compute dx
                     pm.dx = npa(cm.x) - npa(pm.x)
 
                     # compute dt
                     pm.dt = cm.t - pm.t;
-
+                    
                     # Write out the seds bag if time has changed.
                     # Some tf frames change at a much faster rate and
                     # so listener reprocesses the same transform
                     # lookup even though latest common time remains
                     # the same. If we did not check pm.dt != zero,
                     # we'd end up with a lot of duplicate entries.
-
+                    
                     # We also check whether pm.dx is zero. This choice
                     # is the result of a fair amount of
                     # experimentation to try to extract the actual
@@ -139,19 +129,18 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # extract the useful subtrajectory out of the bag
                     # and this criterion is the best in terms of
                     # simplicity and quality.
-
-                    tf_match_cnt+=1
+                                  
                     if (pm.dt != zero) and not iszero(pm.dx):
                         #rospy.loginfo("Message time: %s" % str(pm.t))
                         outbag.write('seds/trajectories', pm)
                         nonzero_cnt+=1
-
+                        
                         # alt. set t parameter to orginal bag
                         # time? would need to process bags in
                         # order to avoid time travel
-
+                        
                         pm.x = cm.x
-                        pm.index = cm.index
+                        #pm.index = cm.index
                         pm.t = cm.t
                     
 
@@ -159,17 +148,19 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # sometimes not enough info is recorded to complete the transform lookup
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
                     #rospy.loginfo("LookupException %s" % error)
-
                 except ConnectivityException, error:
                     # sometimes the perceptual information drops out
-                    #rospy.loginfo("ConnectivityException %s" % error)
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+                    #rospy.loginfo("ConnectivityException %s" % error)
+                except tf.Exception, error:
+                    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
+                    #rospy.loginfo("Other Exception %s" % error)
 
         # end of current bag -- write out last entry with dx = 0
         cm.dx = npa(cm.x) - npa(pm.x)
         outbag.write('seds/trajectories', cm)
         #print "Found " + str(tf_cnt) + "tfs, " + str(tf_match_cnt) + " match, and " + str(nonzero_cnt) + " are nonzero."
-        rospy.loginfo("Found %s, %s match and %s are nonzero" % (str(tf_cnt), str(tf_match_cnt), str(nonzero_cnt)))
+        rospy.loginfo("Processed %s, found transforms for %s and %s are nonzero" % (str(tf_cnt), str(tf_match_cnt), str(nonzero_cnt)))
         bag.close()
 
     rospy.loginfo("Writing bag: %s" % outfilename)

@@ -113,11 +113,13 @@ class Driver(object):
         self._as.start()
 
     def action_cb(self,ignore):
-        if self.start(self) == True:
-            self.finished_move=False
+        self.running=False
+        self.finished_move=False
+        self.start(ignore)
+        if self.running==True:
             while self.finished_move==False:
                 time.sleep(0.1)
-            self.stop(self)
+            self.stop(ignore)
             self._as.set_succeeded()
         else:
             self._as.set_aborted()
@@ -244,19 +246,21 @@ class Driver(object):
         if res.loaded:
             # init some variables
             if self.init_start()==True:
+                self.init_start()
                 self.running = True
                 rospy.loginfo("%s starting!" % self.name)
             else:
                 rospy.loginfo("%s unable to start!" % self.name)
-                self.runningCV.notify()
-                self.runningCV.release()
-                return False
+            #    self.runningCV.notify()
+            #    self.runningCV.release()
+                #return False
         else:
             rospy.loginfo("ds_node model not loaded -- not starting!")
 
         self.runningCV.notify()
         self.runningCV.release()
-        return True
+        #return True
+        return []
 
     def publish(self):
         pt = Point()

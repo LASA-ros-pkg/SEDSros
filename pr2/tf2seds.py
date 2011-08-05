@@ -39,7 +39,7 @@ class BagListener(TransformerROS):
             self.setTransform(transform, "tf2seds")
 
 def iszero(arr):
-    #return False
+    return False
     for e in arr:
         if math.fabs(e) > 1e-5:
             return False
@@ -78,17 +78,28 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
 
         # read all the bag messages and process /tf messages
         for topic, msg, t in bag.read_messages():
-
-            if topic[-2:] == "tf":
+            #print msg.transforms[0].header
+            #cfid=msg.transforms[0].child_frame_id
+            #ofid=msg.transforms[0].header.frame_id
+            #print cfid
+            #print ofid
+            print len(msg.transforms)
+            if topic[-2:] == "tf":# and (cfid == target_fid or cfid == source_fid):
                 # loads the transforms
                 listener.load(msg)
                 tf_cnt+=1
+                if target_fid in msg.transforms.child_frame_id:
+                    print "Got it!"
 
                 # computes the coordinates
                 try:
+                    #Can we transform between these?
                     et = listener.lookupTransform(source_fid, target_fid, rostime.Time(0))
-                    t = listener.getLatestCommonTime(source_fid, target_fid)
-
+                    #the last time we knew both things
+                    tcommon = listener.getLatestCommonTime(source_fid, target_fid)
+                    #transform from the source at that time to the target at the current time
+                    #assume source is not moving
+                    et = listener.lookupTransformFull(source_fid,tcommon,target_fid,t,source_fid)
                     # fill in the seds message
                     cm.x = et[0][:] # pos (x,y,z)
                     quat = et[1][:]
@@ -130,8 +141,8 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     # simplicity and quality.
 
                     tf_match_cnt+=1
-                    if (pm.dt != zero and not iszero(pm.dx)):
-                        rospy.logdebug("Message time: %s" % str(pm.t))
+                    if (pm.dt != zero) and not iszero(pm.dx):
+                        #rospy.loginfo("Message time: %s" % str(pm.t))
                         outbag.write('seds/trajectories', pm)
                         nonzero_cnt+=1
 
@@ -142,15 +153,16 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                         pm.x = cm.x
                         pm.index = cm.index
                         pm.t = cm.t
+                    
 
                 except LookupException, error:
                     # sometimes not enough info is recorded to complete the transform lookup
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
-                    rospy.loginfo("LookupException %s" % error)
+                    #rospy.loginfo("LookupException %s" % error)
 
                 except ConnectivityException, error:
                     # sometimes the perceptual information drops out
-                    rospy.loginfo("ConnectivityException %s" % error)
+                    #rospy.loginfo("ConnectivityException %s" % error)
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
 
         # end of current bag -- write out last entry with dx = 0

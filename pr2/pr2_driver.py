@@ -35,7 +35,7 @@ import threading
 class PR2Driver(driver.Driver):
 
     def init_subscriber(self):
-        self.listener = tf.TransformListener()
+        self.listener = tf.TransformListener(True,rospy.Duration(30))
 
     def init_publisher(self):
         self.rpub = rospy.Publisher('r_cart/command_pose', PoseStamped)

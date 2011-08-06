@@ -139,7 +139,7 @@ class PR2Driver(driver.Driver):
         try:
             t = self.listener.getLatestCommonTime(self.model_source_frameid,self.model_target_frameid)
             if rospy.Time.now()-t < rospy.Duration.from_sec(1):
-                et = self.listener.lookupTransform(self.model_source_frameid, self.model_target_frameid, rostime.Time(0))
+                et = self.listener.lookupTransformFull(self.model_source_frameid, t, self.model_target_frameid, rostime.Time(0),"torso_lift_link)
                 pos = et[0][:] # pos (x,y,z)
                 quat = et[1][:]
                 eu = euler_from_quaternion(quat)

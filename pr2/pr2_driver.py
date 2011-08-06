@@ -138,20 +138,21 @@ class PR2Driver(driver.Driver):
         # feedback for input into seds
         try:
             t = self.listener.getLatestCommonTime(self.model_source_frameid,self.model_target_frameid)
-            if rospy.Time.now()-t < rospy.Duration.from_sec(1):
-                et = self.listener.lookupTransformFull(self.model_source_frameid, t, self.model_target_frameid, rostime.Time(0),"torso_lift_link")
-                pos = et[0][:] # pos (x,y,z)
-                quat = et[1][:]
-                eu = euler_from_quaternion(quat)
-                return pos + eu
-            else:
-                #print "Haven't seen anything for 1 sec, using no feedback"
-                return self.newx
+            #if rospy.Time.now()-t < rospy.Duration.from_sec(1):
+            et = self.listener.lookupTransformFull(self.model_source_frameid, t, self.model_target_frameid, rostime.Time(0),"torso_lift_link")
+            pos = et[0][:] # pos (x,y,z)
+            quat = et[1][:]
+            eu = euler_from_quaternion(quat)
+            return pos + eu
+            #else:
+            #    #print "Haven't seen anything for 1 sec, using no feedback"
+            #    return self.newx
 
-        except tf.Exception:
-            rospy.logdebug("%s tf exception in gcp!" % self.name)
+        except tf.Exception, error:
+            rospy.logwarn("%s tf exception in gcp: %s!" % (self.name,error))
             
         # if we have an exception just return the previously computed pose!
+        #assumes arm moved correctly?
         return self.newx
 
     def publish(self):

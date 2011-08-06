@@ -316,6 +316,7 @@ class Driver(object):
                 # something drastic has changed
                 self.x = position
                 #print "Perturbation detected!"
+                rospy.logwarn("Perturbation detected %s" % str(la.norm(nx-cp)))
             else:
                 self.x = self.newx
 

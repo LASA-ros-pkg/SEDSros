@@ -16,7 +16,7 @@ import numpy
 import getopt
 npa = numpy.array
 
-from tf import TransformerROS, LookupException, ConnectivityException
+from tf import TransformerROS, LookupException, ConnectivityException, ExtrapolationException
 from tf.transformations import euler_from_quaternion
 import tf
 from seds.msg import SedsMessage
@@ -94,6 +94,7 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                     source_time=listener.getLatestCommonTime(source_fid,unmoving_fid)
                     target_time=listener.getLatestCommonTime(target_fid,unmoving_fid)
                     et = listener.lookupTransformFull(source_fid,source_time,target_fid,target_time,unmoving_fid)
+                    #et = listener.lookupTransformFull(target_fid,target_time,source_fid,source_time,unmoving_fid) 
                     tf_match_cnt+=1
                     # get the current x
                     cm.x = et[0][:] + euler_from_quaternion(et[1][:])
@@ -132,6 +133,9 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                                   
                     if (pm.dt != zero) and not iszero(pm.dx):
                         #rospy.loginfo("Message time: %s" % str(pm.t))
+                        #print "At time " + str(min(source_time,target_time))
+                        #print "-Translation " + str(pm.x[0:3])
+                        
                         outbag.write('seds/trajectories', pm)
                         nonzero_cnt+=1
                         
@@ -144,17 +148,9 @@ def process_bags(outfilename, inbags, source_fid, target_fid):
                         pm.t = cm.t
                     
 
-                except LookupException, error:
-                    # sometimes not enough info is recorded to complete the transform lookup
-                    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
-                    #rospy.loginfo("LookupException %s" % error)
-                except ConnectivityException, error:
-                    # sometimes the perceptual information drops out
-                    rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
-                    #rospy.loginfo("ConnectivityException %s" % error)
                 except tf.Exception, error:
                     rospy.logdebug("%s %s %s %s" % (error,topic,msg,t))
-                    #rospy.loginfo("Other Exception %s" % error)
+                    #rospy.loginfo("TF Exception %s" % error)
 
         # end of current bag -- write out last entry with dx = 0
         cm.dx = npa(cm.x) - npa(pm.x)

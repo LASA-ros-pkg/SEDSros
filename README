@@ -1,6 +1,8 @@
 Seds Notes
 J. Stober
-Last updated: 7.14.2011
+D. Grollman
+Last updated: 8.10.2011
+
 
 == What's New ==
 
@@ -89,6 +91,8 @@ project:
    The trajectories should be stored in a single directory and should
    be the only bagfiles in that directory.
 
+	If using vision to train an object-relative motion, please make sure the robot sees the object before collecting data.
+
 1a. Translating rosbags into a usable form.
 
    - nodes/tf2seds.py
@@ -138,6 +142,8 @@ project:
    process will read these frame_ids and record them as part of the
    model parameters.
 
+	The source and target frames must, of course, be present in the recorded bagfiles.  Currently, tf2seds is set up to treat the source frame (object) as more slowly changing than the target frame (the hand).  As such, it performs some tf-based time-traveling to compute the position of the target in source-frame coordinates, and uses the torso_lift_link as an unchanging base.
+
 2. Running SEDS to learn model parameters.
 
    Running SEDS is as easy as "rosrun seds seds_node". This starts the
@@ -146,10 +152,9 @@ project:
 
    rosservice call seds/optimize seds.bag
 
-   The first argument is the location of a SedsMessage bag. The second
-   argument tells /seds/optimize the kind of input (SedsMessage). The
-   third argument tells the service where to write out the SEDS
-   parameters.
+	You probably want to save this with a call to:
+
+	rosservice call seds/save_file FILE   
 
 3. Driving the robot using ADS.
 
@@ -201,47 +206,35 @@ project:
    Make sure you have a ds_node running with the proper parameters
    already loaded.
 
+	Parameters ---
+	
+	There are several parameters in pr2_driver, which can be set on the command line or changed during operation.  Important ones are:
+
+	Velocity multiplier: To overcome friction/sticktion, and timing errors, you may want to multiply all computed velocities by a constant. Set this by --vm=# or a call to pr2_driver/set_vm #
+
+	Source and Target fids: To apply a known motion to a new object/arm,
+	you can change the source and target with --source=FID --target=FID,
+	or while running, call pr2_driver/change_object FID, or
+	pr2_driver/change_hand (which will automatically swap
+	r_gripper_tool_frame for l_gripper_tool_frame, and vice versa.
+
+	Feedback: Just running the full ('hard') feedback controller tends
+	not to work, as friction prevents the robot from moving in between
+	timesteps.  Setting the feedback to 'none' will instead assume that
+	the robot has performed exactly as commanded.  'adaptive' feedback
+	merges these two, and uses no feedback as long as the robot is
+	within some threshold (athresh) of where we think it should be, and
+	uses feedback when perturbations drag the robot outside of that
+	area.  Feedback is set with --feedback or a call to
+	pr2_driver/change_feedback [none,hard,adaptive], and the threshold
+	is set with --athresh or a call to pr2_driver/set_threshold
+
 == Current Issues ==
 
-Velocity Problem:
-
-SEDS produces velocities that may be too small to overcome the static
-friction of the robot resulting in the robot getting stuck. The
-current solutions are to run an open loop control (and not get any
-feedback about the current pose) or to add a velocity multiplier to
-the SEDS output that will overcome any static friction contraints (at
-least far away from the goal). Another approach that adaptively
-switches between open-closed loop control is still experimental. For
-details see lib/driver.py (compute_old_pose).
-
-Object Frames:
-
-To the best of my knowledge, the pose translations required for
-tracking to an object all work, and I suspect that the problem is not
-with the frame translations but with the model velocities and
-frequency of perceptual data. In any event, here are the hotspots
-where frame transformations take place:
-
-pr2/tf2seds.py:82 -- lookupTransform gives the coordinates of target
-in source frame which are provided on the command line. For perceptual
-tasks the source is an object in tf and the target is some gripper
-frame.
-
-pr2/pr2_driver.py:106 -- lookupTransform gives the current position of
-model target in the model source frame (which will be the same as the
-arguments for tf2seds.py).
-
-pr2/pr2_driver.py:133 -- lookupTransform gives the new commanded
-position in the source frame of the JTTeleop controller.
-
-pr2/pr2_driver.py:142 -- lookupTransform get the current rotations and
-just passes them through to the command topic.
-
-One key problem seems to be that the bags that result from recording
-/tf with objects have very few data points. This may mean we need to
-interpolate to create new datapoints or make sure tscale accounts for
-the much larger dT in the object frame transformations, if the speed
-with which object frame tfs are publish cannot be increased.
+There's some funkiness in the handlng of time-traveling tfs in tf2seds
+and driver.  This is partially due to my learning about it while I
+coded this.  I believe the link to torso_lift_link can be removed, by
+judicious use of rospy.Time(0) instead of now (or t in tf2seds).
 
 == Other Tools ==
 

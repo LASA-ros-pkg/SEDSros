@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 """
-Author: Jeremy M. Stober
-Program: WAM2SEDS.PY
-Date: Monday, July 7th, 2011
+Author:  Christophe Paccolat
+Program: OMNI2SEDS.PY
+Date: Monday, August 15th, 2011
 Description: Create a bagfile of SedsMessages for optimization.
 """
 
@@ -17,6 +17,7 @@ import glob
 import os
 import numpy as np
 import math
+from copy import deepcopy
 npa = np.array
 
 def iszero(arr):
@@ -29,7 +30,9 @@ def process_bags(outfilename, inbags):
 
     outbag = rosbag.Bag(outfilename, "w")
     pm = SedsMessage() # store previous message for dx computation
+    pm.x = [0.0] * 9
     cm = SedsMessage() # current seds message
+    cm.x = [0.0] * 9
     zero = rospy.rostime.Duration(0)
 
     # open all the trajectory bags
@@ -41,40 +44,27 @@ def process_bags(outfilename, inbags):
         first = True # set pm on first step -- compute pm.dx on every other step
 	
         # read all the bag messages and process /tf messages
-        for topic, msg, t in bag.read_messages():
-		
-            if topic == "joints_fb":
-		#print msg.position
-                #cm.x = npa(msg.position)
+	for topic, msg, t in bag.read_messages():
+
+            if topic == "/joints_fb":	
+			
+		# Check for updated values
 		cm.t = t
                 cm.index = i
-                if first:
-		    pm.x = npa([0.0] * 9)
-		    #print pm.x
-		    for j in msg.jointnumber:
-		    	pm.x[j] =  msg.position[j]
-                    pm.index = cm.index
-                    pm.t = cm.t
-                    first = False
-		
-		cm.x = pm.x
-
-		# Check for updated values
-		#print "pm.x = "
-		#print pm.x
-		#print "cm.x = "
-		#print cm.x
-		#print "msg = "
-		#print msg.position
 		id = 0
 		for j in msg.jointnumber:
 		    cm.x[j] =  msg.position[id]
 		    id+=1
 
-		#print cm.x
-		#print "---"		
+		# Initial copy
+                if first:
+		    pm.x = deepcopy(cm.x)
+                    pm.index = cm.index
+                    pm.t = cm.t
+                    first = False
+		
                 # compute dx
-                pm.dx = cm.x - pm.x
+                pm.dx = npa(cm.x) - npa(pm.x)
 
                 # compute dt
                 pm.dt = cm.t - pm.t
@@ -95,30 +85,23 @@ def process_bags(outfilename, inbags):
                 # experimented a fair bit with the best way to
                 # extract the useful subtrajectory out of the bag
                 # and this criterion is the best in terms of
-                # simplicity and quality.
+                # simplicity and quality.        
 
                 if (pm.dt != zero and not iszero(pm.dx)):
-	        	print "pm.x = "
-			print pm.x
-			print "pm.dx = "
-			print pm.dx
-			print "pm.dt = "
-			print pm.dt
                 	rospy.logdebug("Message time: %s" % str(pm.t))
                 	outbag.write('seds/trajectories', pm)
 
                 # alt. set t parameter to orginal bag
                 # time? would need to process bags in
                 # order to avoid time travel
-
-                pm.x = cm.x
+		#for j in range(len(cm.x)):
+		#	pm.x[j] = cm.x[j]
+		pm.x = deepcopy(cm.x)
                 pm.index = cm.index
                 pm.t = cm.t
 
-        # end of current bag -- write out last entry with dx = 0
-	print cm.x
-	print pm.x        
-	cm.dx = cm.x - pm.x
+        # end of current bag -- write out last entry with dx = 0      
+	cm.dx = npa(cm.x) - npa(pm.x)
 
         outbag.write('seds/trajectories', cm)
 

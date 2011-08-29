@@ -1,20 +1,21 @@
 #! /usr/bin/env python
 """
-Author: Jeremy M. Stober
-Program: WAM_DRIVER.PY
-Date: Monday, June 20 2011
-Description: Publishes ds commands to /wam/cartesian_command.
+Author: Christophe Paccolat
+Program: OMNIROB_DRIVER.PY
+Date: Friday, August 26 2011
+Description: Publishes ds commands to /omnirob/jointangles_command.
 """
 
 import roslib
 roslib.load_manifest('seds')
-roslib.load_manifest('wam_msgs')
+roslib.load_manifest('orca_proxy')
 import driver
 
 import rospy
 import rospy.rostime as rostime
 
-from wam_msgs.msg import CartesianCoordinates
+from orca_proxy.msg import joints_set
+from orca_proxy.msg import joints_fb
 
 import numpy
 import numpy.linalg as la
@@ -30,13 +31,15 @@ class OmnirobDriver(driver.Driver):
         self.current_pose = data
         self.runningCV.release()
 
+    # Publish to
     def init_publisher(self):
-        self.cmd = CartesianCoordinates()
-        #self.pub = rospy.Publisher('/Omnirob/jointangle_coordinates', CartesianCoordinates)
-
+        self.cmd = joints_set()
+        self.pub = rospy.Publisher('/orca_proxy/joints_set', joints_set)
+    
+    # Subscribe to
     def init_subscriber(self):
-        self.current_pose = CartesianCoordinates()
-        #self.sub = rospy.Subscriber('/Omnirob/jointangle_coordinates', CartesianCoordinates, self.callback)
+        self.current_pose = joints_fb()
+        self.sub = rospy.Subscriber('/orca_proxy/joints_fb', joints_fb, self.callback)
 
     def __init__(self, name, vm, feedback, rate):
         driver.Driver.__init__(self, name, vm, feedback, rate)
@@ -57,7 +60,6 @@ class OmnirobDriver(driver.Driver):
 
         # init some variables
         self.x = list(self.current_pose.position)
-        #self.rot = list(self.current_pose.euler)
         self.newx = self.x
 
     def get_current_position(self):
@@ -68,7 +70,6 @@ class OmnirobDriver(driver.Driver):
 
         # set command
         self.cmd.position = self.newx
-        #self.cmd.euler = list(self.current_pose.euler)
 
         # publish
         self.pub.publish(self.cmd)

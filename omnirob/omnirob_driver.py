@@ -32,11 +32,11 @@ class OmnirobDriver(driver.Driver):
 
     def init_publisher(self):
         self.cmd = CartesianCoordinates()
-        self.pub = rospy.Publisher('/Omnirob/jointangle_coordinates', CartesianCoordinates)
+        #self.pub = rospy.Publisher('/Omnirob/jointangle_coordinates', CartesianCoordinates)
 
     def init_subscriber(self):
         self.current_pose = CartesianCoordinates()
-        self.sub = rospy.Subscriber('/Omnirob/jointangle_coordinates', CartesianCoordinates, self.callback)
+        #self.sub = rospy.Subscriber('/Omnirob/jointangle_coordinates', CartesianCoordinates, self.callback)
 
     def __init__(self, name, vm, feedback, rate):
         driver.Driver.__init__(self, name, vm, feedback, rate)

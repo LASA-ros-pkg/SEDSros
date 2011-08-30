@@ -2,4 +2,5 @@
 	<node name="seds_node" pkg="seds" type="seds_node" />
 	<node name="ds_node" pkg="seds" type="ds_node" />
 	<node name="omnirob_driver" pkg="seds" type="omnirob_driver.py" />
+	<node name="omnirob_wrapper" pkg="orca_proxy" type="omnirob_wrapper.py" />
 </launch>

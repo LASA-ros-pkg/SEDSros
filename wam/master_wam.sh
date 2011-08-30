@@ -52,7 +52,7 @@ function run_demo {
 	    rosservice call /ds_node/load_model
 
 	    # in case you need to restart
-	    rosservice call /seds/save_model /tmp/model.bag
+	    rosservice call /seds/save_file /tmp/model.bag
 
 	    echo "Model is learned and loaded."
 	  break

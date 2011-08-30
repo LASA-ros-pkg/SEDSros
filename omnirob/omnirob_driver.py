@@ -34,12 +34,12 @@ class OmnirobDriver(driver.Driver):
     # Publish to
     def init_publisher(self):
         self.cmd = joints_set()
-        self.pub = rospy.Publisher('/orca_proxy/joints_set', joints_set)
+        self.pub = rospy.Publisher('/joints_set', joints_set)
     
     # Subscribe to
     def init_subscriber(self):
         self.current_pose = joints_fb()
-        self.sub = rospy.Subscriber('/orca_proxy/joints_fb', joints_fb, self.callback)
+        self.sub = rospy.Subscriber('/joints_fb_redone', joints_fb, self.callback)
 
     def __init__(self, name, vm, feedback, rate):
         driver.Driver.__init__(self, name, vm, feedback, rate)
@@ -61,6 +61,7 @@ class OmnirobDriver(driver.Driver):
         # init some variables
         self.x = list(self.current_pose.position)
         self.newx = self.x
+        return True
 
     def get_current_position(self):
         return list(self.current_pose.position)
@@ -69,7 +70,8 @@ class OmnirobDriver(driver.Driver):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 
         # set command
-        self.cmd.position = self.newx
+        #self.cmd.action = 7 # goto abs position
+        self.cmd.targetpos = self.newx
 
         # publish
         self.pub.publish(self.cmd)

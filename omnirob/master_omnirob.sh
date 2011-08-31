@@ -49,27 +49,45 @@ function run_demo {
 	    rosservice call /seds/optimize /tmp/tmp.bag
 
             # load model parameters into ds_node
-	    rosservice call /ds_node/load_model
+	    #rosservice call /ds_node/load_model
 
 	    # in case you need to restart
-	    rosservice call /seds/save_model /tmp/model.bag
+	    rosservice call /seds/save_file /tmp/model.bag
 
 	    echo "Model is learned and loaded."
 	  break
 	elif [ "$opt" = "Run" ]; then
 
-	  #rosservice call /omnirob/idle
+	  # load model parameters into ds_node
+	  DS_STATE=$(rosservice call /ds_node/is_loaded 2>&1)
+	  DS_LOADED="loaded: True"
+	  if [ "$DS_STATE" != "$DS_LOADED" ]; then
+	  	if [ -e /tmp/model.bag ]; then
+			echo "Loading model from saved file"
+			rosservice call /ds_node/load_file /tmp/model.bag 
+#||  echo "Error" && exit
+	  	else
+			echo "Loading model from cache:"
+			rosservice call /ds_node/load_model 
+#|| echo "Error" && exit
+	  	fi
+	  fi
+
+	  DS_STATE=$(rosservice call /ds_node/is_loaded 2>&1)
+	  if [[ $DS_STATE == *ERROR* ]]; then
+	  	echo "An error occured while loading the model, did you learn it ?"
+		exit
+	  fi
+
 	  echo "Move the Omnirob to a test position and press enter!"
 	  read
 
 	  echo "Activating Omnirob and calling Omnirob driver!"
-	  #rosservice call /omnirob/active # put wam under active control
 	  rosservice call /omnirob_driver/start # starts the driver service
 
 	  echo "Press enter to stop driving the robot."
 	  read
 	  rosservice call /omnirob_driver/stop
-	  #rosservice call /omnirob/idle
 
 	else
 	  #clear
@@ -84,6 +102,7 @@ ddir=$1
 
 mkdir -p $ddir
 
+launch_silent orca_proxy orca_proxy.launch simulatorip:=128.178.145.171 &
 launch_silent seds omnirob.launch &
 
 # Run the demo.

@@ -39,7 +39,7 @@ class OmnirobDriver(driver.Driver):
     # Subscribe to
     def init_subscriber(self):
         self.current_pose = joints_fb()
-        self.sub = rospy.Subscriber('/joints_fb_redone', joints_fb, self.callback)
+        self.sub = rospy.Subscriber('/joints_fb', joints_fb, self.callback)
 
     def __init__(self, name, vm, feedback, rate):
         driver.Driver.__init__(self, name, vm, feedback, rate)
@@ -70,9 +70,10 @@ class OmnirobDriver(driver.Driver):
         rospy.logdebug("x : %s dx : %s newx : %s" % (str(self.x), str(self.dx), str(self.newx)))
 
         # set command
-        #self.cmd.action = 7 # goto abs position
-        self.cmd.targetpos = self.newx
-
+        self.cmd.action = [7]*9 # goto abs position
+        self.cmd.maxforce = [10]*9
+        self.cmd.controlid = [8, 8, 7, 6, 5, 4, 3, 2, 1]
+        self.cmd.targetpos = self.newx 
         # publish
         self.pub.publish(self.cmd)
 

@@ -1,9 +1,21 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # This is the master script for recording, training, then driving the robot using SEDS-based control.
 
 function launch_silent {
-    roslaunch $1 $2 >> /tmp/seds.out 2>> /tmp/seds.err
+    local NODE=$1
+    local FILE=$2
+    local OPTS=$3
+    if [ -z OPTS ]; then
+	roslaunch $NODE $FILE >> /tmp/seds.out 2>> /tmp/seds.err &
+    else
+	roslaunch $NODE $FILE $OPTS >> /tmp/seds.out 2>> /tmp/seds.err &
+    fi
+
+    local PID=$!
+
+    # Return PID cleanly
+    echo "$PID"
 }
 
 function record_bag {
@@ -12,8 +24,10 @@ function record_bag {
     echo "Prepare to record demonstration number $2 in directory $1."
     echo "Press enter to begin demonstration. When the demonstration is complete press enter again."
 
+
+
     read
-    rosbag record -a &
+    rosbag record /joints_fb &
     ID=$!
  
     read
@@ -33,6 +47,7 @@ function run_demo {
 	  echo "Quiting..."
 	  exit
 	elif [ "$opt" = "Record" ]; then
+	    OMNIPID=$(launch_silent orca_proxy orca_base.launch serverip:=128.178.145.171)
 	    #rosservice call /omnirob/idle
 	    record_bag $ddir $ndemo
 	    let ndemo=ndemo+1
@@ -41,41 +56,39 @@ function run_demo {
 	    echo "Beginning the training process!"
 	    echo "Processing the demonstration bagfiles..."
 
-	    rosrun seds omni2seds.py -b $ddir -o /tmp/tmp.bag
+	    rosrun seds omni2seds.py -b $ddir -o /tmp/tmp.bag ||  ( echo "Error while running seds wrapper script" && exit )
 
 	    echo "Learning new model parameters using seds!"
 
             # optimization
-	    rosservice call /seds/optimize /tmp/tmp.bag
-
-            # load model parameters into ds_node
-	    #rosservice call /ds_node/load_model
+	    rosservice call /seds/optimize /tmp/tmp.bag ||  ( echo "Error while running SEDS optimization" && exit )
 
 	    # in case you need to restart
-	    rosservice call /seds/save_file /tmp/model.bag
+	    rosservice call /seds/save_file /tmp/model.bag ||  ( echo "Error while saving model to file" && exit )
 
 	    echo "Model is learned and loaded."
 	  break
 	elif [ "$opt" = "Run" ]; then
 
+	  echo "Running the orca driver"
+	  OMNIPID=$(launch_silent orca_proxy orca_base.launch serverip:=128.178.145.171)
+	  
 	  # load model parameters into ds_node
 	  DS_STATE=$(rosservice call /ds_node/is_loaded 2>&1)
 	  DS_LOADED="loaded: True"
 	  if [ "$DS_STATE" != "$DS_LOADED" ]; then
 	  	if [ -e /tmp/model.bag ]; then
 			echo "Loading model from saved file"
-			rosservice call /ds_node/load_file /tmp/model.bag 
-#||  echo "Error" && exit
+			rosservice call /ds_node/load_file /tmp/model.bag ||  ( echo "Error while loading from file" && exit )
 	  	else
 			echo "Loading model from cache:"
-			rosservice call /ds_node/load_model 
-#|| echo "Error" && exit
+			rosservice call /ds_node/load_model || ( echo "Error while loading from cache" && exit )
 	  	fi
 	  fi
 
 	  DS_STATE=$(rosservice call /ds_node/is_loaded 2>&1)
 	  if [[ $DS_STATE == *ERROR* ]]; then
-	  	echo "An error occured while loading the model, did you learn it ?"
+	  	echo "Could not load any model, did you learn one ?"
 		exit
 	  fi
 
@@ -88,6 +101,8 @@ function run_demo {
 	  echo "Press enter to stop driving the robot."
 	  read
 	  rosservice call /omnirob_driver/stop
+	  kill -2 $OMNIPID  # send a SIGINT signal to kill orca_proxy
+	  echo "Done"
 
 	else
 	  #clear
@@ -98,12 +113,13 @@ function run_demo {
 }
 
 # The script requires a working directory.
+
 ddir=$1
 
 mkdir -p $ddir
 
-launch_silent orca_proxy orca_proxy.launch simulatorip:=128.178.145.171 &
-launch_silent seds omnirob.launch &
+# Run the SEDS/omnirob related nodes
+SEDSPID=$(launch_silent seds omnirob.launch)
 
 # Run the demo.
 run_demo

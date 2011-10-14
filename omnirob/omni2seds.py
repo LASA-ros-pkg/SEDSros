@@ -30,9 +30,9 @@ def process_bags(outfilename, inbags):
 
     outbag = rosbag.Bag(outfilename, "w")
     pm = SedsMessage() # store previous message for dx computation
-    pm.x = [0.0] * 9
+    #pm.x = [0.0] * 9
     cm = SedsMessage() # current seds message
-    cm.x = [0.0] * 9
+    #cm.x = [0.0] * 9
     zero = rospy.rostime.Duration(0)
 
     # open all the trajectory bags
@@ -44,21 +44,21 @@ def process_bags(outfilename, inbags):
         first = True # set pm on first step -- compute pm.dx on every other step
 	
         # read all the bag messages and process /tf messages
-	for topic, msg, t in bag.read_messages():
+        for topic, msg, t in bag.read_messages():
 
             if topic == "/joints_fb":	
-			
-		# Check for updated values
-		cm.t = t
+                # Check for updated values
+                cm.t = t
                 cm.index = i
-		id = 0
-		for j in msg.jointnumber:
-		    cm.x[j] =  msg.position[id]
-		    id+=1
+                cm.x = npa(msg.position)
+#                id = 0
+#                for j in msg.jointnumber:
+#                    cm.x[j] =  msg.position[id]
+#                    id+=1
 
-		# Initial copy
+                # Initial copy
                 if first:
-		    pm.x = deepcopy(cm.x)
+                    pm.x = deepcopy(cm.x)
                     pm.index = cm.index
                     pm.t = cm.t
                     first = False
@@ -94,9 +94,8 @@ def process_bags(outfilename, inbags):
                 # alt. set t parameter to orginal bag
                 # time? would need to process bags in
                 # order to avoid time travel
-		#for j in range(len(cm.x)):
-		#	pm.x[j] = cm.x[j]
-		pm.x = deepcopy(cm.x)
+		
+                pm.x = deepcopy(cm.x)
                 pm.index = cm.index
                 pm.t = cm.t
 
@@ -123,9 +122,9 @@ def main():
     rospy.myargv(argv=sys.argv)
     (options,args) = getopt.getopt(sys.argv[1:], 'b:o:s:t:', ['bags=','ouptut=','source=','target='])
 
-    rospy.init_node("wam2seds")
-    path = rospy.get_param("/wam2seds/source_directory", None)
-    outfile = rospy.get_param("/wam2seds/outputfile", None)
+    rospy.init_node("omni2seds")
+    path = rospy.get_param("/omni2seds/source_directory", None)
+    outfile = rospy.get_param("/omni2seds/outputfile", None)
 
     # or specify any of these options on the command line
     for o,a in options:

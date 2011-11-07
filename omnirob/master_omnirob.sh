@@ -65,7 +65,7 @@ function run_demo {
 				if [ $? -ne 0 ]; then
 					echo "Error while running seds wrapper script"
 					exit
-				if
+				fi
 
 				# optimization
 	    		echo "Learning new model parameters using seds!"
@@ -82,7 +82,9 @@ function run_demo {
 					exit
 				fi
 
-	    		echo "Model is learned and loaded."			elif [ "$opt" = "Run" ]; then
+	    		echo "Model is learned and loaded."	
+		
+			elif [ "$opt" = "Run" ]; then
 				echo "Running the orca driver"
 	  			# Issues when running orca like this...
 	  			#OMNIPID=$(launch_silent orca_proxy orca_base.launch simulatorip:=128.178.145.171)
@@ -125,7 +127,6 @@ function run_demo {
 	  			rosservice call /omnirob_driver/stop
 	  			#kill -2 $OMNIPID  # send a SIGINT signal to kill orca_proxy
 	  			echo "Done"
-
 			else
 	  			echo "Bad option!"
 			fi

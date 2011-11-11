@@ -3,3 +3,6 @@ build/
 srv_gen/
 msg_gen/
 src/seds/
+msg/
+bin/
+lib/
